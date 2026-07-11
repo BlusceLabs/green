@@ -20,6 +20,7 @@ import (
 	"github.com/BlusceLabs/green/internal/config"
 	"github.com/BlusceLabs/green/internal/doctor"
 	"github.com/BlusceLabs/green/internal/errhint"
+	"github.com/BlusceLabs/green/internal/greenruntime"
 	"github.com/BlusceLabs/green/internal/lsp"
 	internalmcp "github.com/BlusceLabs/green/internal/mcp"
 	"github.com/BlusceLabs/green/internal/modelregistry"
@@ -34,7 +35,6 @@ import (
 	"github.com/BlusceLabs/green/internal/tools"
 	"github.com/BlusceLabs/green/internal/usage"
 	"github.com/BlusceLabs/green/internal/usercommands"
-	"github.com/BlusceLabs/green/internal/greenruntime"
 )
 
 const tuiToolOutputLimit = 240
@@ -324,6 +324,14 @@ type model struct {
 	// only at turn start (beginRun), so the count climbs across a multi-tool turn
 	// instead of snapping back to green after each tool call.
 	turnStreamedRunes int
+	// streamThroughput is a smoothed (EWMA) estimate of generation speed in
+	// tokens/second, sampled from the wall-clock delta between streamed output
+	// fragments. Unfilled until enough real output has arrived to be meaningful;
+	// the working line shows "· <n> tok/s" next to the cumulative count so the
+	// user can see at a glance whether a long turn is fast or stalled. It is shown
+	// even on the very first fragment at 0 tok/s until the EWMA has one real
+	// interval to average over.
+	streamThroughput float64
 	// Streaming-text fade state. lineAges is keyed to LOGICAL lines of
 	// streamingText (one entry per \n in the accumulated text), and
 	// lastStreamActivity is the time of the most recent delta (used for
@@ -1908,6 +1916,7 @@ func (m model) updateModel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// "↑ N tok" pulse climbs during a long write, and bump lastStreamActivity so
 		// the quiet-generation hint stays clear of an actively-streaming provider.
 		m.turnStreamedRunes += utf8.RuneCountInString(msg.fragment)
+		m.recordStreamThroughput(msg.fragment)
 		m.lastStreamActivity = m.now()
 		return m, nil
 	case agentTextMsg:
@@ -1919,6 +1928,9 @@ func (m model) updateModel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.clearStreamingToolCall()
 		m.streamingText = append(m.streamingText, msg.delta...)
 		m.turnStreamedRunes += utf8.RuneCountInString(msg.delta)
+		// Smooth the live generation speed from this fragment's arrival time
+		// relative to the last activity, so the working line can show tok/s.
+		m.recordStreamThroughput(msg.delta)
 		// recordStreamingDelta appends a time.Time to lineAges for every
 		// newline in the delta and bumps lastStreamActivity. It also
 		// re-stamps the in-progress last entry so the line that's still
@@ -1945,6 +1957,7 @@ func (m model) updateModel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.streamingReasoning += msg.delta
 		m.turnStreamedRunes += utf8.RuneCountInString(msg.delta)
+		m.recordStreamThroughput(msg.delta)
 		// Reasoning IS live provider output, so refresh the activity clock — else the
 		// quiet-generation hint can wrongly read "still generating…" mid-think.
 		if msg.delta != "" {
@@ -3344,7 +3357,26 @@ func (m model) workingTokenIndicator() string {
 	if m.turnStreamedRunes > 0 && tokens < 1 {
 		tokens = 1
 	}
-	return "↑ " + humanCount(tokens) + " tok"
+	indicator := "↑ " + humanCount(tokens) + " tok"
+	// Live generation speed sits next to the cumulative count so the working
+	// line reads "it's generating AND here's how fast" — a sudden drop to 0
+	// tok/s is itself a stall signal, complementing the quiet-generation hint.
+	if throughput := m.workingThroughputIndicator(); throughput != "" {
+		indicator += "  ·  " + throughput
+	}
+	return indicator
+}
+
+// workingThroughputIndicator renders the smoothed generation speed ("· <n>
+// tok/s") once enough output has streamed to be meaningful, else "". It stays
+// hidden until the EWMA has real intervals to average (the first fragment seeds
+// it to 0, which we don't surface), so a nearly-instant turn doesn't flash a
+// bogus spike.
+func (m model) workingThroughputIndicator() string {
+	if m.streamThroughput <= 0 {
+		return ""
+	}
+	return "· " + humanCount(int(m.streamThroughput+0.5)) + " tok/s"
 }
 
 // quietWorkingHint is how long the stream must be silent (no streamed text,
@@ -4559,6 +4591,8 @@ func (m model) beginRun(cancel context.CancelFunc) model {
 	m.sidebarHidden = false
 	m.turnStartedAt = m.now()
 	m.turnStreamedRunes = 0
+	m.streamThroughput = 0
+	m.lastStreamActivity = time.Time{}
 	m.spinnerTicking = true
 	return m
 }

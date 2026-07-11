@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -251,6 +252,46 @@ func (m *model) recordStreamingDelta(delta string) {
 		}
 	}
 	m.lastStreamActivity = now
+}
+
+// streamThroughputAlpha is the EWMA smoothing factor for the live generation
+// speed estimate. 0.3 lets the displayed tok/s track a change within a few
+// fragments without jittering on every token — a fast local model and a slow
+// remote one both settle into a readable number quickly.
+const streamThroughputAlpha = 0.3
+
+// recordStreamThroughput folds the wall-clock interval since the previous
+// streamed output into the running tok/s estimate. The rate is computed from
+// the delta's rune count (at the same ~4 chars/token the cumulative estimate
+// uses, so the two figures agree) over the time since lastStreamActivity.
+//
+// The first fragment of a turn has no prior interval (lastStreamActivity is
+// zero), so it seeds the estimate to a neutral 0 rather than inflating it with
+// a divide-by-near-zero burst. Subsequent fragments update the EWMA. A zero- or
+// negative-length interval (clock skew, or a batch of deltas in the same
+// millisecond) is skipped so it can't produce a giant spike or a divide-by-zero.
+func (m *model) recordStreamThroughput(delta string) {
+	runes := utf8.RuneCountInString(delta)
+	if runes == 0 {
+		return
+	}
+	now := m.now()
+	if m.lastStreamActivity.IsZero() {
+		m.lastStreamActivity = now
+		m.streamThroughput = 0
+		return
+	}
+	dt := now.Sub(m.lastStreamActivity).Seconds()
+	m.lastStreamActivity = now
+	if dt <= 0 {
+		return
+	}
+	instant := float64(runes) / 4 / dt
+	if m.streamThroughput == 0 {
+		m.streamThroughput = instant
+		return
+	}
+	m.streamThroughput += streamThroughputAlpha * (instant - m.streamThroughput)
 }
 
 // resetStreamingFade clears the fade state. Called on stream end (so the

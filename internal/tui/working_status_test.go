@@ -313,3 +313,43 @@ func TestInterimBlockNoPreviewWhenReasoningExpanded(t *testing.T) {
 		t.Fatalf("reasoning should appear exactly once when expanded (no preview dup):\n%s", got)
 	}
 }
+
+// The live tok/s readout stays hidden until enough output has streamed to give a
+// real average, then surfaces a smoothed speed next to the cumulative count.
+func TestWorkingThroughputIndicatorHidesUntilMeaningfulThenShows(t *testing.T) {
+	m := newModel(t.Context(), Options{ModelName: "gpt-4.1"})
+
+	// Fresh turn: no rate yet -> empty.
+	if got := m.workingThroughputIndicator(); got != "" {
+		t.Fatalf("before any output: want empty, got %q", got)
+	}
+
+	base := time.Date(2026, 6, 18, 23, 0, 0, 0, time.UTC)
+	m.now = func() time.Time { return base }
+	m = m.beginRun(nil)
+	rid := m.activeRunID
+
+	// First fragment seeds to 0 (no prior interval) -> still hidden.
+	updated, _ := m.Update(agentTextMsg{runID: rid, delta: strings.Repeat("a", 40)})
+	m = updated.(model)
+	if got := m.workingThroughputIndicator(); got != "" {
+		t.Fatalf("first fragment (no interval): want empty, got %q", got)
+	}
+
+	// A second fragment 1s later at ~10 tok -> ~10 tok/s, shown.
+	m.now = func() time.Time { return base.Add(1 * time.Second) }
+	updated, _ = m.Update(agentTextMsg{runID: rid, delta: strings.Repeat("b", 40)})
+	m = updated.(model)
+	got := m.workingThroughputIndicator()
+	if !strings.Contains(got, "tok/s") {
+		t.Fatalf("after real interval: want tok/s readout, got %q", got)
+	}
+	if !strings.Contains(got, "10") {
+		t.Fatalf("after ~10 tok/s: want ~10 tok/s, got %q", got)
+	}
+
+	// The cumulative counter and the rate both land on the rendered working line.
+	if line := plainRender(t, m.workingStatusLine()); !strings.Contains(line, "tok/s") || !strings.Contains(line, "tok") {
+		t.Fatalf("working line should carry both counts:\n%s", line)
+	}
+}
