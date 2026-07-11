@@ -97,7 +97,7 @@ jobs:
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" --generate-notes 2>/dev/null || true
           gh release upload "$tag" dist/release/* --repo "$GITHUB_REPOSITORY" --clobber
 
-  # Publishes the npm wrapper (@BlusceLabs/green) once every platform's release
+  # Publishes the npm wrapper (@bluscelabs/green) once every platform's release
   # assets are live — the package's postinstall downloads its binary from the
   # GitHub Release, so publishing before the assets exist would ship a package
   # that fails to install.
@@ -106,7 +106,7 @@ jobs:
   # npmjs.com settings must list this repo + workflow file as a trusted
   # publisher, and provenance is then generated automatically. Note npm only
   # allows configuring a trusted publisher on an EXISTING package, so the very
-  # first @BlusceLabs/green publish is a one-time manual `npm publish` bootstrap.
+  # first @bluscelabs/green publish is a one-time manual `npm publish` bootstrap.
   publish-npm:
     name: Publish npm package
     needs: package
@@ -117,7 +117,7 @@ jobs:
     # maintainer approves it in the Actions UI before anything reaches npm.
     environment:
       name: npm-publish
-      url: https://www.npmjs.com/package/@BlusceLabs/green
+      url: https://www.npmjs.com/package/@bluscelabs/green
     permissions:
       contents: read
       id-token: write # OIDC token exchange for npm trusted publishing + provenance

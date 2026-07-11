@@ -2,7 +2,7 @@
 
 green is distributed as:
 
-- an npm package, `@BlusceLabs/green`
+- an npm package, `@bluscelabs/green`
 - release archives on GitHub Releases
 - source builds with Go 1.25+
 
@@ -12,7 +12,7 @@ They require a published GitHub Release for the requested version.
 ## npm
 
 ```bash
-npm install -g @BlusceLabs/green
+npm install -g @bluscelabs/green
 green
 ```
 
@@ -36,12 +36,12 @@ blocked postinstall. This works for project and global installs:
 
 ```bash
 # project install
-bun add @BlusceLabs/green
-bun pm trust @BlusceLabs/green
+bun add @bluscelabs/green
+bun pm trust @bluscelabs/green
 
 # global install
-bun add -g @BlusceLabs/green
-bun pm -g trust @BlusceLabs/green
+bun add -g @bluscelabs/green
+bun pm -g trust @bluscelabs/green
 ```
 
 `bun pm untrusted` (or `bun pm -g untrusted`) lists the blocked postinstalls if
@@ -52,19 +52,19 @@ package to your project's `trustedDependencies` before installing:
 
 ```json
 {
-  "trustedDependencies": ["@BlusceLabs/green"]
+  "trustedDependencies": ["@bluscelabs/green"]
 }
 ```
 
 ```bash
-bun add @BlusceLabs/green
+bun add @bluscelabs/green
 ```
 
 On Bun versions that do not have `bun pm trust`, run the installer manually
 after installing:
 
 ```bash
-node node_modules/@BlusceLabs/green/scripts/postinstall.mjs
+node node_modules/@bluscelabs/green/scripts/postinstall.mjs
 ```
 
 Reference: <https://bun.sh/docs/pm/lifecycle>

@@ -32,8 +32,8 @@ func TestPackageBinPointsToNodeWrapper(t *testing.T) {
 	if err := json.Unmarshal(bytes, &pkg); err != nil {
 		t.Fatalf("Unmarshal package.json: %v", err)
 	}
-	if pkg.Name != "@BlusceLabs/green" {
-		t.Fatalf("name = %q, want @BlusceLabs/green", pkg.Name)
+	if pkg.Name != "@bluscelabs/green" {
+		t.Fatalf("name = %q, want @bluscelabs/green", pkg.Name)
 	}
 	if pkg.Bin["green"] != "bin/green.js" {
 		t.Fatalf("bin.green = %q, want bin/green.js", pkg.Bin["green"])

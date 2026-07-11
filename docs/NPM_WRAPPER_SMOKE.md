@@ -23,7 +23,7 @@ go run ./cmd/green-release smoke
 
 ## Checklist
 
-- `package.json` has the expected package name (`@BlusceLabs/green`), version,
+- `package.json` has the expected package name (`@bluscelabs/green`), version,
   `bin.green` entry, and exactly one `scripts` entry — the `postinstall` hook.
 - `scripts/postinstall.mjs` resolves the correct release asset name/URL per
   platform (`green_INSTALL_DRY_RUN=1` prints the plan), verifies the downloaded

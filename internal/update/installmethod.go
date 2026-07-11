@@ -11,7 +11,7 @@ import (
 // binary into the same directory as package.json and leaves a
 // ".green-binary-version" marker file next to it — both are reliable signals
 // that a given executable came from an npm install.
-const npmPackageName = "@BlusceLabs/green"
+const npmPackageName = "@bluscelabs/green"
 
 // InstallMethod identifies how the running green binary was installed.
 type InstallMethod string

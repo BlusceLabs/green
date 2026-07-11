@@ -67,10 +67,10 @@ if (!existsSync(nativePath)) {
       (ranByBun
         ? 'You installed with Bun, which does not run dependency lifecycle scripts\n' +
           'by default. Trust the package to run the blocked postinstall:\n' +
-          '  bun pm trust @BlusceLabs/green       (project install)\n' +
-          '  bun pm -g trust @BlusceLabs/green    (global install)\n' +
+          '  bun pm trust @bluscelabs/green       (project install)\n' +
+          '  bun pm -g trust @bluscelabs/green    (global install)\n' +
           'On Bun versions without `bun pm trust`, add\n' +
-          '  "trustedDependencies": ["@BlusceLabs/green"]\n' +
+          '  "trustedDependencies": ["@bluscelabs/green"]\n' +
           'to your project package.json and reinstall.\n' +
           '\n'
         : '') +

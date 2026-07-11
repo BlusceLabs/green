@@ -45,7 +45,7 @@ green exec --output-format stream-json < turns.jsonl
 ### npm
 
 ```bash
-npm install -g @BlusceLabs/green
+npm install -g @bluscelabs/green
 green
 ```
 
@@ -64,18 +64,18 @@ blocked postinstall. This works for project and global installs:
 
 ```bash
 # project install
-bun add @BlusceLabs/green
-bun pm trust @BlusceLabs/green
+bun add @bluscelabs/green
+bun pm trust @bluscelabs/green
 
 # global install
-bun add -g @BlusceLabs/green
-bun pm -g trust @BlusceLabs/green
+bun add -g @bluscelabs/green
+bun pm -g trust @bluscelabs/green
 ```
 
 Alternatives: allow the postinstall up front by adding
-`"trustedDependencies": ["@BlusceLabs/green"]` to your project's package.json
+`"trustedDependencies": ["@bluscelabs/green"]` to your project's package.json
 before `bun add`, or run the installer manually
-(`node node_modules/@BlusceLabs/green/scripts/postinstall.mjs`) on Bun versions
+(`node node_modules/@bluscelabs/green/scripts/postinstall.mjs`) on Bun versions
 that do not have `bun pm trust`.
 
 ### Install scripts
