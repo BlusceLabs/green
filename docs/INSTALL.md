@@ -1,0 +1,270 @@
+# Installing green
+
+green is distributed as:
+
+- an npm package, `@BlusceLabs/green`
+- release archives on GitHub Releases
+- source builds with Go 1.25+
+
+The npm package and install scripts download a platform-specific release archive.
+They require a published GitHub Release for the requested version.
+
+## npm
+
+```bash
+npm install -g @BlusceLabs/green
+green
+```
+
+The package supports Linux, macOS, and Windows on x64 and arm64. It installs the
+`green` command and downloads the matching release binary during `postinstall`.
+
+Requirements:
+
+- Node.js 18+
+- network access to npm and GitHub Releases
+
+## Bun
+
+Bun is "default-secure" and does not run lifecycle scripts of installed
+dependencies (only the installing project's own scripts), so the `postinstall`
+that fetches the green binary is silently skipped. The first run then fails with
+`No native binary found next to the npm wrapper`.
+
+The simplest fix is to trust the package after installing, which runs the
+blocked postinstall. This works for project and global installs:
+
+```bash
+# project install
+bun add @BlusceLabs/green
+bun pm trust @BlusceLabs/green
+
+# global install
+bun add -g @BlusceLabs/green
+bun pm -g trust @BlusceLabs/green
+```
+
+`bun pm untrusted` (or `bun pm -g untrusted`) lists the blocked postinstalls if
+you want to inspect before trusting.
+
+Alternatively, allow the postinstall to run at install time by adding the
+package to your project's `trustedDependencies` before installing:
+
+```json
+{
+  "trustedDependencies": ["@BlusceLabs/green"]
+}
+```
+
+```bash
+bun add @BlusceLabs/green
+```
+
+On Bun versions that do not have `bun pm trust`, run the installer manually
+after installing:
+
+```bash
+node node_modules/@BlusceLabs/green/scripts/postinstall.mjs
+```
+
+Reference: <https://bun.sh/docs/pm/lifecycle>
+
+## Linux And macOS Script
+
+Install the latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BlusceLabs/green/main/scripts/install.sh | bash
+```
+
+From a checkout:
+
+```bash
+scripts/install.sh
+```
+
+Install a specific version:
+
+```bash
+green_VERSION=0.1.0 scripts/install.sh
+scripts/install.sh --version 0.1.0
+```
+
+Install somewhere else:
+
+```bash
+green_INSTALL_DIR="$HOME/bin" scripts/install.sh
+scripts/install.sh --install-dir "$HOME/bin"
+```
+
+Defaults:
+
+- Repository: `BlusceLabs/green`
+- Version: latest GitHub release
+- Install path: `~/.local/bin/green`
+
+Requirements: Bash, `curl` or `wget`, `tar`, and `shasum` or `sha256sum`.
+
+## Windows PowerShell Script
+
+Install the latest release:
+
+```powershell
+irm https://raw.githubusercontent.com/BlusceLabs/green/main/scripts/install.ps1 | iex
+```
+
+From a checkout:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+```
+
+Install a specific version:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1 -Version 0.1.0
+```
+
+Install somewhere else:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1 -InstallDir "$env:USERPROFILE\bin"
+```
+
+Defaults:
+
+- Repository: `BlusceLabs/green`
+- Version: latest GitHub release
+- Install path: `%LOCALAPPDATA%\green\bin\green.exe`
+
+## From Source
+
+```bash
+git clone https://github.com/BlusceLabs/green.git
+cd green
+go run ./cmd/green
+```
+
+Build a local binary:
+
+```bash
+go build -o green ./cmd/green
+```
+
+Source builds require Go 1.25+.
+
+### Sandbox Helpers For Source Builds
+
+Release archives include the platform sandbox helpers. If you build directly
+from source, build the helpers you need:
+
+Linux:
+
+```bash
+go build -o green ./cmd/green
+go build -o green-linux-sandbox ./cmd/green-linux-sandbox
+go build -o green-seccomp ./cmd/green-seccomp
+```
+
+Put `green` and `green-linux-sandbox` in the same directory on `PATH`, for example
+`~/.local/bin`. `green-seccomp` is kept as a compatibility wrapper; the sandbox
+helper applies the Unix-socket filter itself when that sandbox option is enabled.
+Linux native sandboxing also requires Bubblewrap to be installed.
+
+macOS uses the system sandbox and does not need an extra helper binary.
+
+### Termux (Android)
+
+green can run natively on Android via [Termux](https://termux.dev/). Build with
+`GOOS=android` to avoid the `faccessat2` syscall that is blocked by Samsung's
+seccomp filter on Android:
+
+```bash
+# Install Go in Termux
+pkg install golang
+
+# Build green for Android
+git clone https://github.com/BlusceLabs/green.git
+cd green
+CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags="-s -w" -o green ./cmd/green
+
+# Move into PATH
+mv green ~/.local/bin/
+```
+
+> **Why `GOOS=android`?** Go 1.26+ detects `runtime.GOOS == "android"` and skips
+> the `faccessat2` syscall inside `os/exec.findExecutable`, falling back to
+> permission-bit checks. Without this flag, Android's seccomp sends SIGSYS and
+> kills the process whenever green looks up a binary on `PATH` (git, sh, etc.).
+
+**DNS.** Android does not expose `/etc/resolv.conf`. Go's pure-Go DNS resolver
+needs one. Use `proot` to bind-mount Termux's resolver config:
+
+```bash
+pkg install proot
+proot -b "$PREFIX/etc/resolv.conf:/etc/resolv.conf" green
+```
+
+Create a wrapper at `~/.local/bin/green` to avoid typing proot every time:
+
+```bash
+#!/data/data/com.termux/files/usr/bin/bash
+exec proot -b "$PREFIX/etc/resolv.conf:/etc/resolv.conf" ~/.local/bin/green.bin "$@"
+```
+
+**Scroll.** On native Termux (not under PRoot), mouse scrolling works out of the
+box. The TUI uses Bubble Tea's `AllMotion` mouse mode by default. If you run green
+inside PRoot (e.g. through proot-distro), the scroll fix activates `CellMotion`
+to avoid PRoot's ptrace interference with the 1003 escape sequence.
+
+**Providers.** green works with any OpenAI-compatible provider on Termux. For
+example, to use OpenCode Zen's free tier:
+
+```bash
+green providers add opencode \
+  --name opencode \
+  --model deepseek-v4-flash-free \
+  --base-url https://opencode.ai/zen/v1 \
+  --set-active
+```
+
+Windows source builds can use the main `green.exe` as the command runner and setup
+helper through green's built-in self-dispatch path. If you want a release-style
+layout anyway, build the standalone helper executables next to `green.exe`:
+
+```powershell
+go build -o green.exe ./cmd/green
+go build -o green-windows-command-runner.exe ./cmd/green-windows-command-runner
+go build -o green-windows-sandbox-setup.exe ./cmd/green-windows-sandbox-setup
+```
+
+## Release Archive Format
+
+Release archives are named:
+
+- `green-v<version>-linux-<arch>.tar.gz`
+- `green-v<version>-macos-<arch>.tar.gz`
+- `green-v<version>-windows-<arch>.zip`
+
+Supported targets:
+
+- `linux-x64`
+- `linux-arm64`
+- `macos-x64`
+- `macos-arm64`
+- `windows-x64`
+- `windows-arm64`
+
+Each archive must have a matching `.sha256` file. The install scripts download
+both files, verify the checksum, and then copy the binary into the install
+directory.
+
+## Updating
+
+Check for a newer release:
+
+```bash
+green update --check
+```
+
+Then reinstall with npm or rerun the install script for the version you want.

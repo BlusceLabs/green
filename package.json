@@ -1,0 +1,43 @@
+{
+  "name": "@BlusceLabs/green",
+  "version": "0.3.0",
+  "description": "green — a fast, multi-provider terminal coding agent.",
+  "type": "module",
+  "module": "bin/green.js",
+  "bin": {
+    "green": "bin/green.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.mjs"
+  },
+  "files": [
+    "bin/green.js",
+    "scripts/postinstall.mjs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "agent-browser": "^0.30.1",
+    "tuistory": "^0.10.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32",
+    "android"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlusceLabs/green.git"
+  },
+  "homepage": "https://github.com/BlusceLabs/green#readme",
+  "bugs": {
+    "url": "https://github.com/BlusceLabs/green/issues"
+  },
+  "license": "MIT"
+}
