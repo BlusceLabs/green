@@ -53,6 +53,12 @@ func New(profile config.ProviderProfile, options Options) (greenruntime.Provider
 		return newCodexProvider(profile, resolved, options)
 	}
 
+	// Attach green's OpenRouter app-attribution headers (HTTP-Referer +
+	// X-OpenRouter-Title) so usage shows up under the green project on
+	// OpenRouter's public rankings. User-set headers win, and the merge is a
+	// no-op for every provider that isn't OpenRouter.
+	customHeaders := openRouterAttributionHeaders(profile)
+
 	switch resolved.providerKind {
 	case config.ProviderKindOpenAI, config.ProviderKindOpenAICompatible:
 		// prompt_cache_key is an OpenAI-only chat-completions field. Strict
@@ -67,7 +73,7 @@ func New(profile config.ProviderProfile, options Options) (greenruntime.Provider
 			AuthHeader:            profile.AuthHeader,
 			AuthScheme:            profile.AuthScheme,
 			AuthHeaderValue:       profile.AuthHeaderValue,
-			CustomHeaders:         profile.CustomHeaders,
+			CustomHeaders:         customHeaders,
 			OAuthResolver:         options.OAuthResolver,
 			MaxTokens:             resolved.maxOutputTokens,
 			HTTPClient:            options.HTTPClient,
@@ -83,7 +89,7 @@ func New(profile config.ProviderProfile, options Options) (greenruntime.Provider
 			AuthHeader:      profile.AuthHeader,
 			AuthScheme:      profile.AuthScheme,
 			AuthHeaderValue: profile.AuthHeaderValue,
-			CustomHeaders:   profile.CustomHeaders,
+			CustomHeaders:   customHeaders,
 			OAuthResolver:   options.OAuthResolver,
 			MaxTokens:       resolved.maxOutputTokens,
 			HTTPClient:      options.HTTPClient,
@@ -97,7 +103,7 @@ func New(profile config.ProviderProfile, options Options) (greenruntime.Provider
 			AuthHeader:      profile.AuthHeader,
 			AuthScheme:      profile.AuthScheme,
 			AuthHeaderValue: profile.AuthHeaderValue,
-			CustomHeaders:   profile.CustomHeaders,
+			CustomHeaders:   customHeaders,
 			OAuthResolver:   options.OAuthResolver,
 			MaxTokens:       resolved.maxOutputTokens,
 			HTTPClient:      options.HTTPClient,
@@ -291,6 +297,30 @@ func defaultRegistry(registry *modelregistry.Registry) (modelregistry.Registry, 
 // provider's standard error path surfaces it.
 func isCodexCatalog(profile config.ProviderProfile, _ resolvedProfile) bool {
 	return providercatalog.NormalizeID(profile.CatalogID) == "chatgpt"
+}
+
+// openRouterAttributionHeaders returns the OpenRouter app-attribution headers
+// (HTTP-Referer + X-OpenRouter-Title) merged over the profile's own custom
+// headers. HTTP-Referer is required for OpenRouter to create an app page and
+// include green's usage in its public rankings; X-OpenRouter-Title sets the
+// display name (X-Title is also accepted for backwards compatibility). The
+// headers are added only when the profile targets OpenRouter (catalog id
+// "openrouter"), and any user-set header always wins over the defaults.
+func openRouterAttributionHeaders(profile config.ProviderProfile) map[string]string {
+	if providercatalog.NormalizeID(profile.CatalogID) != "openrouter" {
+		return providerio.CopyHeaders(profile.CustomHeaders)
+	}
+	merged := make(map[string]string, len(profile.CustomHeaders)+2)
+	for key, value := range profile.CustomHeaders {
+		merged[key] = value
+	}
+	if _, ok := merged["HTTP-Referer"]; !ok {
+		merged["HTTP-Referer"] = "https://github.com/BlusceLabs/green"
+	}
+	if _, ok := merged["X-OpenRouter-Title"]; !ok {
+		merged["X-OpenRouter-Title"] = "green"
+	}
+	return merged
 }
 
 // newCodexProvider builds a Codex-flavored openai provider for the chatgpt

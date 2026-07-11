@@ -46,6 +46,10 @@ import (
 
 var version = "dev"
 
+// appRepoURL is the canonical project repository, included in the User-Agent
+// so outbound requests can be attributed to the green project.
+const appRepoURL = "https://github.com/BlusceLabs/green"
+
 type appDeps struct {
 	getwd            func() (string, error)
 	stdin            io.Reader
@@ -197,7 +201,7 @@ func defaultAppDeps() appDeps {
 }
 
 func userAgent() string {
-	return "green/" + version
+	return "green/" + version + " (+" + appRepoURL + ")"
 }
 
 // defaultUserPluginsDir resolves the user-scoped plugins root

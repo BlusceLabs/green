@@ -878,6 +878,21 @@ const (
 	composerMaxVisibleLines = 4
 )
 
+// composerPlaceholder returns the contextual composer hint. It always begins
+// with composerPlaceholder so the base prompt stays recognizable, then appends
+// the active model and permission mode so the user knows what will respond and
+// under which guardrails before they type a thing.
+func (m model) composerPlaceholder() string {
+	if m.modelName == "" {
+		return composerPlaceholder
+	}
+	mode := m.permissionMode
+	if mode == "" {
+		mode = agent.PermissionModeAuto
+	}
+	return composerPlaceholder + "  ·  " + m.modelName + " · " + string(mode)
+}
+
 // composerCursorBlinkInterval is the on/off period of the composer text cursor.
 const composerCursorBlinkInterval = 530 * time.Millisecond
 
@@ -3448,6 +3463,7 @@ func (m model) appendStreamingCursor(lines []string, width int) []string {
 // composerLine renders the borderless composer.
 func (m model) composerLine(width int) string {
 	input := m.input
+	input.Placeholder = m.composerPlaceholder()
 	hideInputForSuggestions := m.suggestionsActive() && (!m.suggestionsAreFiles || fileSuggestionOnlyInput(m.input.Value()))
 	if hideInputForSuggestions {
 		input.SetValue("")

@@ -267,6 +267,7 @@ func TestInitialRenderShowsLimeChatSurface(t *testing.T) {
 	assertNotContains(t, view, "running green against ")
 	assertNotContains(t, view, " 0 ")
 	assertContains(t, view, composerPlaceholder)
+	assertContains(t, view, "gpt-4.1")
 	assertNotContains(t, view, "interactive")
 	if strings.Contains(view, "Welcome to green") {
 		t.Fatalf("empty chat surface should not show welcome transcript clutter, got %q", view)

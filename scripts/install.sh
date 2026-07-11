@@ -106,7 +106,9 @@ latest_tag() {
   local api_url="${green_GITHUB_API%/}/repos/${green_REPO}/releases/latest"
   local tag
 
-  download_json "$api_url" "$metadata_file"
+  if ! download_json "$api_url" "$metadata_file"; then
+    fail "could not reach $api_url — green installs from published release archives, and this repo has no GitHub Release yet. Build from source instead: go build -o green ./cmd/green"
+  fi
   tag="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$metadata_file" | head -n 1)"
   [ -n "$tag" ] || fail "could not read tag_name from $api_url"
   echo "$tag"

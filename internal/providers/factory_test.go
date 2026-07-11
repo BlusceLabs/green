@@ -159,6 +159,106 @@ func TestNewSupportsOpenAIProviderKind(t *testing.T) {
 	}
 }
 
+func TestNewAddsOpenRouterAppAttributionHeaders(t *testing.T) {
+	transport := &captureTransport{
+		responseBody: "data: [DONE]\n\n",
+	}
+	client := &http.Client{Transport: transport}
+
+	provider, err := New(config.ProviderProfile{
+		Name:         "openrouter",
+		CatalogID:    "openrouter",
+		ProviderKind: config.ProviderKindOpenAICompatible,
+		APIKey:       "sk-or",
+		Model:        "openai/gpt-4.1",
+	}, Options{HTTPClient: client})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	stream, err := provider.StreamCompletion(context.Background(), greenruntime.CompletionRequest{
+		Messages: []greenruntime.Message{{Role: greenruntime.MessageRoleUser, Content: "hello"}},
+	})
+	if err != nil {
+		t.Fatalf("StreamCompletion() error = %v", err)
+	}
+	for range stream {
+	}
+
+	if got := transport.request.Header.Get("HTTP-Referer"); got != "https://github.com/BlusceLabs/green" {
+		t.Fatalf("HTTP-Referer = %q, want green repo URL for OpenRouter attribution", got)
+	}
+	if got := transport.request.Header.Get("X-OpenRouter-Title"); got != "green" {
+		t.Fatalf("X-OpenRouter-Title = %q, want green app title", got)
+	}
+}
+
+func TestNewOpenRouterHeadersDeferToCustomHeaders(t *testing.T) {
+	transport := &captureTransport{
+		responseBody: "data: [DONE]\n\n",
+	}
+	client := &http.Client{Transport: transport}
+
+	provider, err := New(config.ProviderProfile{
+		Name:          "openrouter",
+		CatalogID:     "openrouter",
+		ProviderKind:  config.ProviderKindOpenAICompatible,
+		APIKey:        "sk-or",
+		Model:         "openai/gpt-4.1",
+		CustomHeaders: map[string]string{"HTTP-Referer": "https://myapp.example", "X-OpenRouter-Title": "My App"},
+	}, Options{HTTPClient: client})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	stream, err := provider.StreamCompletion(context.Background(), greenruntime.CompletionRequest{
+		Messages: []greenruntime.Message{{Role: greenruntime.MessageRoleUser, Content: "hello"}},
+	})
+	if err != nil {
+		t.Fatalf("StreamCompletion() error = %v", err)
+	}
+	for range stream {
+	}
+
+	if got := transport.request.Header.Get("HTTP-Referer"); got != "https://myapp.example" {
+		t.Fatalf("HTTP-Referer = %q, want user-set header to win", got)
+	}
+	if got := transport.request.Header.Get("X-OpenRouter-Title"); got != "My App" {
+		t.Fatalf("X-OpenRouter-Title = %q, want user-set header to win", got)
+	}
+}
+
+func TestNewSkipsAttributionHeadersForNonOpenRouter(t *testing.T) {
+	transport := &captureTransport{
+		responseBody: "data: [DONE]\n\n",
+	}
+	client := &http.Client{Transport: transport}
+
+	provider, err := New(config.ProviderProfile{
+		Name:         "gateway",
+		ProviderKind: config.ProviderKindOpenAICompatible,
+		BaseURL:      "https://gateway.example/v1",
+		APIKey:       "sk-gateway",
+		Model:        "gateway-model",
+	}, Options{HTTPClient: client})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	stream, err := provider.StreamCompletion(context.Background(), greenruntime.CompletionRequest{
+		Messages: []greenruntime.Message{{Role: greenruntime.MessageRoleUser, Content: "hello"}},
+	})
+	if err != nil {
+		t.Fatalf("StreamCompletion() error = %v", err)
+	}
+	for range stream {
+	}
+
+	if got := transport.request.Header.Get("HTTP-Referer"); got != "" {
+		t.Fatalf("HTTP-Referer = %q, want empty for non-OpenRouter provider", got)
+	}
+	if got := transport.request.Header.Get("X-OpenRouter-Title"); got != "" {
+		t.Fatalf("X-OpenRouter-Title = %q, want empty for non-OpenRouter provider", got)
+	}
+}
+
 // TestPromptCacheKeyOnlyOnOfficialOpenAI locks in #624: session-backed TUI
 // turns always carry a PromptCacheKey, but openai-compatible gateways (NVIDIA
 // NIM, strict local proxies) reject the OpenAI-only prompt_cache_key field.
