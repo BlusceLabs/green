@@ -200,8 +200,8 @@ func Package(ctx context.Context, options PackageOptions) (PackageResult, error)
 	}
 	stagingDir := filepath.Join(stagingRoot, packageName)
 	archivePath := filepath.Join(releaseDir, archiveName)
-	artifactPath := filepath.Join(rootDir, greenArtifactName(goos))
-	stagedBinaryPath := filepath.Join(stagingDir, greenArtifactName(goos))
+	artifactPath := filepath.Join(rootDir, GreenArtifactName(goos))
+	stagedBinaryPath := filepath.Join(stagingDir, GreenArtifactName(goos))
 	helperArtifacts := map[string]string{}
 	if goos == "linux" {
 		helperPath := filepath.Join(rootDir, LinuxSandboxHelperArtifactName(goos))
@@ -264,7 +264,7 @@ func Package(ctx context.Context, options PackageOptions) (PackageResult, error)
 	}, nil
 }
 
-func greenArtifactName(goos string) string {
+func GreenArtifactName(goos string) string {
 	if goos == "windows" {
 		return "green.exe"
 	}
@@ -300,7 +300,7 @@ func WindowsSandboxSetupArtifactName(goos string) string {
 }
 
 func DefaultBuildOutput(rootDir string, goos string) string {
-	return filepath.Join(rootDir, greenArtifactName(goos))
+	return filepath.Join(rootDir, GreenArtifactName(goos))
 }
 
 func BuildLdflags(version string) string {

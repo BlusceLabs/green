@@ -13,12 +13,30 @@ func TestEmptyStateShowsBrandAndTaglineOnly(t *testing.T) {
 	m.width, m.height = 100, 30
 
 	view := plainRender(t, m.View())
-	assertContains(t, view, "███████╗███████╗██████╗  ██████╗")
+	// Full GREEN ANSI Shadow wordmark (ink GREE + lime N).
+	assertContains(t, view, " ██████╗ ██████╗ ███████╗███████╗███╗   ██╗")
 	assertContains(t, view, emptyStateTagline)
+	assertContains(t, view, `Try "explain this codebase"`)
+	assertContains(t, view, "Press ? for keyboard shortcuts")
 	assertNotContains(t, view, "running green against ")
 	assertNotContains(t, view, "add a --version flag")
 	assertNotContains(t, view, "explain internal/agent/loop.go")
 	assertNotContains(t, view, "fix the failing test in internal/tools")
+	// Rebrand regression: the old ZERO wordmark must not reappear.
+	assertNotContains(t, view, "╚══███╔╝██╔════╝██╔══██╗")
+}
+
+func TestEmptyStateCompactBrandOnNarrowWidth(t *testing.T) {
+	m := newModel(context.Background(), Options{ProviderName: "anthropic", ModelName: "claude-sonnet-4.5"})
+	m.width, m.height = 40, 24
+
+	view := plainRender(t, m.View())
+	assertContains(t, view, emptyStateTagline)
+	// Narrow frames use the single-line brand, not the 6-line wordmark.
+	assertNotContains(t, view, " ██████╗ ██████╗ ███████╗███████╗")
+	assertContains(t, view, "green")
+	assertContains(t, view, "? shortcuts")
+	assertContains(t, view, `Try "explain this codebase"`)
 }
 
 func TestEmptyStateShowsVersion(t *testing.T) {

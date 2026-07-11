@@ -129,7 +129,7 @@ func TestHelpOverlayCompositesOverChatNotReplacingIt(t *testing.T) {
 	}
 	// Chrome that renders in the baseline (and sits outside the centered overlay
 	// box) must survive behind the overlay. The full-screen replace showed none.
-	for _, marker := range []string{"gpt-4o", "describe a task"} {
+	for _, marker := range []string{"gpt-4o", "Ask green to fix, explain, or build"} {
 		if !strings.Contains(base, marker) {
 			t.Fatalf("precondition: baseline chat should contain %q:\n%s", marker, base)
 		}

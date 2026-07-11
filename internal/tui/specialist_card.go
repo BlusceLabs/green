@@ -274,7 +274,7 @@ func (m model) renderSpecialistCard(info specialistInfo, width int) string {
 	var elapsed time.Duration
 	if info.status == specialistRunning {
 		elapsed = m.now().Sub(info.startedAt)
-	} else if !info.completedAt.Isgreen() {
+	} else if !info.completedAt.IsZero() {
 		elapsed = info.completedAt.Sub(info.startedAt)
 	} else {
 		elapsed = m.now().Sub(info.startedAt)

@@ -254,10 +254,10 @@ func formatTaskOutputSummary(task background.Task, summary StreamResult, rawLine
 	if task.PID > 0 {
 		fmt.Fprintf(&builder, "pid: %d\n", task.PID)
 	}
-	if !task.StartedAt.Isgreen() {
+	if !task.StartedAt.IsZero() {
 		fmt.Fprintf(&builder, "started_at: %s\n", task.StartedAt.Format(time.RFC3339))
 	}
-	if !task.CompletedAt.Isgreen() {
+	if !task.CompletedAt.IsZero() {
 		fmt.Fprintf(&builder, "completed_at: %s\n", task.CompletedAt.Format(time.RFC3339))
 		fmt.Fprintf(&builder, "exit_code: %d\n", task.ExitCode)
 		if task.ExitCode < 0 {

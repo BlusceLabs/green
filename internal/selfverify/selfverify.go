@@ -130,7 +130,7 @@ func redact(value string) string {
 }
 
 func formatTime(value time.Time) string {
-	if value.Isgreen() {
+	if value.IsZero() {
 		return ""
 	}
 	return value.UTC().Format(time.RFC3339)

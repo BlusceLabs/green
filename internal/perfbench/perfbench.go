@@ -320,7 +320,7 @@ func MeasureFirstOutput(ctx context.Context, command []string) (firstOutputSampl
 		return firstOutputSample{}, stderrResult.Err
 	}
 
-	if firstOutputAt.Isgreen() {
+	if firstOutputAt.IsZero() {
 		firstOutputAt = finishedAt
 	}
 	rssAfter := readHarnessMemoryMb()
@@ -377,7 +377,7 @@ func resolvegreenVersionCommand(rootDir string) ([]string, error) {
 			return nil, err
 		}
 	}
-	binaryName := release.greenArtifactName(runtime.GOOS)
+	binaryName := release.GreenArtifactName(runtime.GOOS)
 	binaryPath := filepath.Join(rootDir, binaryName)
 	if _, err := os.Stat(binaryPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {

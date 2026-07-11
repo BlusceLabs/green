@@ -13,27 +13,34 @@ const (
 	minStartupWidth      = 58
 )
 
-// greenWordmarkPrefixLines is the white `ZER` part of the empty-state ANSI
-// Shadow-style wordmark. greenWordmarkOLines keeps the old lime `O` glyph.
+// greenWordmarkPrefixLines is the ink-coloured `GREE` part of the empty-state
+// ANSI Shadow wordmark. greenWordmarkAccentLines is the lime `N` glyph so the
+// brand accent lands on the final letter (same two-tone treatment as the old
+// ZERO mark, updated for the green rebrand).
 var greenWordmarkPrefixLines = []string{
-	`███████╗███████╗██████╗ `,
-	`╚══███╔╝██╔════╝██╔══██╗`,
-	`  ███╔╝ █████╗  ██████╔╝`,
-	` ███╔╝  ██╔══╝  ██╔══██╗`,
-	`███████╗███████╗██║  ██║`,
-	`╚══════╝╚══════╝╚═╝  ╚═╝`,
+	` ██████╗ ██████╗ ███████╗███████╗`,
+	`██╔════╝ ██╔══██╗██╔════╝██╔════╝`,
+	`██║  ███╗██████╔╝█████╗  █████╗  `,
+	`██║   ██║██╔══██╗██╔══╝  ██╔══╝  `,
+	`╚██████╔╝██║  ██║███████╗███████╗`,
+	` ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝`,
 }
 
-var greenWordmarkOLines = []string{
-	` ██████╗ `,
-	`██╔═══██╗`,
-	`██║   ██║`,
-	`██║   ██║`,
-	`╚██████╔╝`,
-	` ╚═════╝ `,
+var greenWordmarkAccentLines = []string{
+	`███╗   ██╗`,
+	`████╗  ██║`,
+	`██╔██╗ ██║`,
+	`██║╚██╗██║`,
+	`██║ ╚████║`,
+	`╚═╝  ╚═══╝`,
 }
 
-const emptyStateTagline = "Any model. Every tool. green limits."
+// emptyStateWordmarkMinWidth is the narrowest frame that still shows the full
+// 6-line ANSI Shadow glyph without truncation. Below this we fall back to a
+// compact single-line brand so tiny terminals never get a mangled wordmark.
+const emptyStateWordmarkMinWidth = 46
+
+const emptyStateTagline = "Any model. Every tool. You own it."
 
 // emptyState renders the centered stream-area block shown while the
 // transcript has no real content: the brand glyph and tagline.
@@ -65,8 +72,16 @@ func (m model) emptyStateWithOverlay(width int, overlay string) string {
 
 func (m model) emptyStateLines(width int) []string {
 	lines := []string{}
-	for _, glyph := range greenWordmarkLines() {
-		lines = append(lines, centerLine(glyph, width))
+	if width >= emptyStateWordmarkMinWidth {
+		for _, glyph := range greenWordmarkLines() {
+			lines = append(lines, centerLine(glyph, width))
+		}
+	} else {
+		// Compact brand: ink name + lime accent dot, reads cleanly at any width.
+		lines = append(lines, centerLine(
+			greenTheme.ink.Render("green")+greenTheme.accent.Render(" ●"),
+			width,
+		))
 	}
 	lines = append(lines, "")
 	lines = append(lines, centerLine(greenTheme.muted.Render(emptyStateTagline), width))
@@ -76,11 +91,11 @@ func (m model) emptyStateLines(width int) []string {
 		lines = append(lines, "")
 		lines = append(lines, centerLine(orient, width))
 	}
-	// A couple of example prompts to seed the first message.
+	// Example prompts seed the first message; the set shrinks on narrow frames.
 	lines = append(lines, "")
-	lines = append(lines, centerLine(greenTheme.faint.Render(emptyStateExamples), width))
+	lines = append(lines, centerLine(greenTheme.faint.Render(emptyStateExamples(width)), width))
 	lines = append(lines, "")
-	lines = append(lines, centerLine(greenTheme.faint.Render("Press ? for keyboard shortcuts · / for commands"), width))
+	lines = append(lines, centerLine(greenTheme.faint.Render(emptyStateHint(width)), width))
 	// centerLine pads but never truncates; below ~62 cols the lines would exceed
 	// the frame without this fit.
 	for index := range lines {
@@ -90,7 +105,23 @@ func (m model) emptyStateLines(width int) []string {
 }
 
 // emptyStateExamples seeds the first prompt with a few representative asks.
-const emptyStateExamples = `Try  "explain this codebase"  ·  "fix the failing test"  ·  "add a --json flag"`
+// Wider frames get three examples; narrower ones drop the third so the line
+// still fits without an ellipsis mid-phrase.
+func emptyStateExamples(width int) string {
+	if width < 72 {
+		return `Try "explain this codebase" · "fix the failing test"`
+	}
+	return `Try "explain this codebase" · "fix the failing test" · "add a --json flag"`
+}
+
+// emptyStateHint is the discoverability footer under the examples. Compact form
+// for tiny terminals so the full home screen stays scannable.
+func emptyStateHint(width int) string {
+	if width < 58 {
+		return "? shortcuts · / commands"
+	}
+	return "Press ? for keyboard shortcuts · / for commands"
+}
 
 // emptyStateOrientation renders a faint "version · cwd · branch · model" line
 // for the home screen, omitting any piece that's unknown. Empty when nothing
@@ -130,9 +161,10 @@ func displayVersion(version string) string {
 }
 
 func greenWordmarkLines() []string {
-	lines := make([]string, 0, minInt(len(greenWordmarkPrefixLines), len(greenWordmarkOLines)))
-	for index := 0; index < len(greenWordmarkPrefixLines) && index < len(greenWordmarkOLines); index++ {
-		lines = append(lines, greenTheme.ink.Render(greenWordmarkPrefixLines[index])+greenTheme.accent.Render(greenWordmarkOLines[index]))
+	n := minInt(len(greenWordmarkPrefixLines), len(greenWordmarkAccentLines))
+	lines := make([]string, 0, n)
+	for index := 0; index < n; index++ {
+		lines = append(lines, greenTheme.ink.Render(greenWordmarkPrefixLines[index])+greenTheme.accent.Render(greenWordmarkAccentLines[index]))
 	}
 	return lines
 }

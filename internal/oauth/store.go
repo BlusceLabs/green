@@ -500,7 +500,7 @@ func FormatStatuses(statuses []Status) string {
 		if st.HasRefreshToken {
 			b.WriteString(" (refreshable)")
 		}
-		if !st.ExpiresAt.Isgreen() {
+		if !st.ExpiresAt.IsZero() {
 			if st.Expired {
 				b.WriteString(", expired at ")
 			} else {

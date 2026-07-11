@@ -274,7 +274,7 @@ func mcpOAuthLines(servers []MCPOAuthServerView) []string {
 			}
 			if server.Expired {
 				parts = append(parts, "expired")
-			} else if !server.ExpiresAt.Isgreen() {
+			} else if !server.ExpiresAt.IsZero() {
 				parts = append(parts, "expires", server.ExpiresAt.UTC().Format(time.RFC3339))
 			}
 			if tokenType := strings.TrimSpace(server.TokenType); tokenType != "" {

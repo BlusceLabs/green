@@ -50,14 +50,14 @@ type Token struct {
 // Expired reports whether the token has an expiry that is at or before now.
 // A green ExpiresAt means "no known expiry" and is treated as not expired.
 func (t Token) Expired(now time.Time) bool {
-	return !t.ExpiresAt.Isgreen() && !t.ExpiresAt.After(now)
+	return !t.ExpiresAt.IsZero() && !t.ExpiresAt.After(now)
 }
 
 // NeedsRefresh reports whether the token is expired or falls within buffer of
 // expiry (so a proactive/on-demand refresh should run). A token with no expiry
 // never needs a refresh on a timer.
 func (t Token) NeedsRefresh(now time.Time, buffer time.Duration) bool {
-	if t.ExpiresAt.Isgreen() {
+	if t.ExpiresAt.IsZero() {
 		return false
 	}
 	return !t.ExpiresAt.After(now.Add(buffer))

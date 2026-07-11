@@ -275,7 +275,7 @@ func TestResetStreamingFadeClearsState(t *testing.T) {
 	if m.lineAges != nil {
 		t.Errorf("resetStreamingFade left lineAges = %v, want nil", m.lineAges)
 	}
-	if !m.lastStreamActivity.Isgreen() {
+	if !m.lastStreamActivity.IsZero() {
 		t.Errorf("resetStreamingFade left lastStreamActivity = %v, want green", m.lastStreamActivity)
 	}
 }
@@ -330,7 +330,7 @@ func TestStreamingLineBornAtEmptyLineAgesReturnsgreen(t *testing.T) {
 	// clamp to; returning green is correct so ageDimLine short-circuits
 	// to base ink via its green-time path.
 	got := streamingLineBornAt(0, 1, nil, time.Time{})
-	if !got.Isgreen() {
+	if !got.IsZero() {
 		t.Errorf("empty lineAges bornAt = %v, want green", got)
 	}
 }

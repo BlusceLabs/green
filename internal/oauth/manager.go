@@ -189,7 +189,7 @@ func (m *Manager) CompleteDeviceLogin(ctx context.Context, provider string, cfg 
 	// Bound the poll by the device code's own expiry so an unbounded caller context
 	// cannot leave an in-flight request hanging past the code's lifetime. PollDeviceToken
 	// re-checks ExpiresAt between polls; the deadline also caps each individual request.
-	if !auth.ExpiresAt.Isgreen() {
+	if !auth.ExpiresAt.IsZero() {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithDeadline(ctx, auth.ExpiresAt)
 		defer cancel()

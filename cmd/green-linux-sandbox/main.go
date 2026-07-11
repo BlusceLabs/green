@@ -5,7 +5,7 @@ package main
 import (
 	"os"
 
-	"github.com/Gitlawb/zero/internal/sandbox"
+	"github.com/BlusceLabs/green/internal/sandbox"
 )
 
 func main() {

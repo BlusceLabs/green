@@ -8,6 +8,6 @@ import (
 )
 
 func main() {
-	fmt.Fprintln(os.Stderr, "zero-seccomp is only supported on Linux")
+	fmt.Fprintln(os.Stderr, "green-seccomp is only supported on Linux")
 	os.Exit(2)
 }

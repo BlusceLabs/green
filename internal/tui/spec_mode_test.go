@@ -259,7 +259,7 @@ func TestSpecLaunchesSeedElapsedClock(t *testing.T) {
 	if cmd == nil || !next.pending {
 		t.Fatal("expected /spec to start a pending draft run")
 	}
-	if next.turnStartedAt.Isgreen() {
+	if next.turnStartedAt.IsZero() {
 		t.Fatal("draft launch did not seed turnStartedAt (elapsed clock would not render)")
 	}
 
@@ -276,7 +276,7 @@ func TestSpecLaunchesSeedElapsedClock(t *testing.T) {
 	if cmd == nil || !next.pending {
 		t.Fatal("expected approval to start a pending implementation run")
 	}
-	if next.turnStartedAt.Isgreen() {
+	if next.turnStartedAt.IsZero() {
 		t.Fatal("impl launch did not seed turnStartedAt (elapsed clock would not render)")
 	}
 }

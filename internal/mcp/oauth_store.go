@@ -422,7 +422,7 @@ func FormatTokenStatuses(statuses []TokenStatus) string {
 		if status.HasRefreshToken {
 			builder.WriteString(" (refreshable)")
 		}
-		if !status.ExpiresAt.Isgreen() {
+		if !status.ExpiresAt.IsZero() {
 			if status.Expired {
 				builder.WriteString(", expired at ")
 			} else {

@@ -192,7 +192,7 @@ func TestFireDueLoopSkipsBehindModal(t *testing.T) {
 	if got.activeLoopID != "" || cmd != nil {
 		t.Fatal("a due loop must not launch a run behind an open picker/modal — it would complete into whatever session the user switches to")
 	}
-	if got.loops[0].nextRunAt.Isgreen() {
+	if got.loops[0].nextRunAt.IsZero() {
 		t.Fatal("a loop skipped because a modal is open must stay scheduled, not have its next run cleared")
 	}
 }
@@ -307,7 +307,7 @@ func TestCancelRunClearsActiveLoopAndRearms(t *testing.T) {
 	if m.activeLoopID != "" {
 		t.Fatal("cancel should clear the active-loop tag so the next turn isn't misattributed")
 	}
-	if m.loops[0].nextRunAt.Isgreen() {
+	if m.loops[0].nextRunAt.IsZero() {
 		t.Fatal("cancel should re-arm the interrupted loop, not leave it running forever")
 	}
 	if !m.loops[0].nextRunAt.Equal(now.Add(5 * time.Minute)) {

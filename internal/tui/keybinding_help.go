@@ -46,7 +46,7 @@ func (m model) buildKeybindingGroups() []keybindingGroup {
 			title: "Model & run controls",
 			bindings: []keybinding{
 				{labelOr(m.keyBindings.cycleReasoning, "Ctrl+T"), "cycle reasoning effort (auto \u2192 low \u2192 medium \u2192 high)"},
-				{"Shift+Tab", "cycle permission mode (auto \u2194 ask)"},
+				{"Shift+Tab", "cycle permission mode (auto \u2194 ask) — status bar chip"},
 				{labelOr(m.keyBindings.togglePlan, "Ctrl+P"), "expand / collapse the plan panel"},
 			},
 		},

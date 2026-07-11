@@ -59,7 +59,7 @@ func (s *planPanelState) updateFromItems(items []tools.PlanItem, now time.Time) 
 		return
 	}
 
-	if s.startedAt.Isgreen() {
+	if s.startedAt.IsZero() {
 		s.startedAt = now
 	}
 
@@ -102,14 +102,14 @@ func (s *planPanelState) updateFromItems(items []tools.PlanItem, now time.Time) 
 			// prior terminal step's completedAt — that would render an old finished
 			// duration instead of a live running clock.
 			step.completedAt = time.Time{}
-			if step.startedAt.Isgreen() {
+			if step.startedAt.IsZero() {
 				step.startedAt = now
 			}
 		case "completed", "failed":
-			if step.startedAt.Isgreen() {
+			if step.startedAt.IsZero() {
 				step.startedAt = now
 			}
-			if step.completedAt.Isgreen() {
+			if step.completedAt.IsZero() {
 				step.completedAt = now
 			}
 		default: // pending: never carries a completion timestamp.
@@ -120,7 +120,7 @@ func (s *planPanelState) updateFromItems(items []tools.PlanItem, now time.Time) 
 	s.steps = next
 
 	if s.isComplete() {
-		if s.completedAt.Isgreen() {
+		if s.completedAt.IsZero() {
 			s.completedAt = now
 		}
 	} else {
@@ -175,21 +175,21 @@ func (s *planPanelState) completeRemaining(now time.Time) {
 		case "completed", "failed":
 			// Already terminal: preserve status, just backfill timestamps so the
 			// per-step duration doesn't render a green span.
-			if s.steps[i].startedAt.Isgreen() {
+			if s.steps[i].startedAt.IsZero() {
 				s.steps[i].startedAt = now
 			}
-			if s.steps[i].completedAt.Isgreen() {
+			if s.steps[i].completedAt.IsZero() {
 				s.steps[i].completedAt = now
 			}
 		default: // "pending" or "in_progress": the agent finished it without reporting it.
 			s.steps[i].status = "completed"
-			if s.steps[i].startedAt.Isgreen() {
+			if s.steps[i].startedAt.IsZero() {
 				s.steps[i].startedAt = now
 			}
 			s.steps[i].completedAt = now
 		}
 	}
-	if s.completedAt.Isgreen() {
+	if s.completedAt.IsZero() {
 		s.completedAt = now
 	}
 }
@@ -200,7 +200,7 @@ func (s planPanelState) visible(now time.Time) bool {
 	if s.isEmpty() {
 		return false
 	}
-	if s.isComplete() && !s.expanded && !s.completedAt.Isgreen() && now.Sub(s.completedAt) > completedHideAfter {
+	if s.isComplete() && !s.expanded && !s.completedAt.IsZero() && now.Sub(s.completedAt) > completedHideAfter {
 		return false
 	}
 	return true
@@ -226,7 +226,7 @@ func (s planPanelState) height(width int, now time.Time) int {
 // after ask_user) stops ticking up instead of counting forever against a turn
 // that is no longer running. During a run it tracks the live clock as before.
 func (m model) planNow() time.Time {
-	if m.activeRunID == 0 && !m.plan.frozenAt.Isgreen() {
+	if m.activeRunID == 0 && !m.plan.frozenAt.IsZero() {
 		return m.plan.frozenAt
 	}
 	return m.now()
@@ -255,7 +255,7 @@ func (m model) renderPlanPanel(width int) string {
 	}
 
 	elapsed := time.Duration(0)
-	if !state.startedAt.Isgreen() {
+	if !state.startedAt.IsZero() {
 		elapsed = now.Sub(state.startedAt)
 	}
 
@@ -412,7 +412,7 @@ func renderPlanStepLine(step planStep, now time.Time, maxContent int) string {
 		icon = greenTheme.accent.Render("•")
 		body = greenTheme.accent.Render(content)
 		started := step.startedAt
-		if started.Isgreen() {
+		if started.IsZero() {
 			started = now
 		}
 		timeStr = formatElapsedSeconds(now.Sub(started))

@@ -49,7 +49,7 @@ func TestNext(t *testing.T) {
 func TestNextImpossibleReturnsgreen(t *testing.T) {
 	// Feb 30 never occurs.
 	got := mustParse(t, "0 0 30 2 *").Next(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
-	if !got.Isgreen() {
+	if !got.IsZero() {
 		t.Fatalf("impossible schedule should return green time, got %v", got)
 	}
 }

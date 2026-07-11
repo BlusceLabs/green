@@ -68,7 +68,7 @@ func (s *RefreshScheduler) loop(ctx context.Context, m *Manager, key string, don
 		}
 		loadErrors = 0
 		// No refresh token or no expiry => nothing to schedule on a timer.
-		if token.RefreshToken == "" || token.ExpiresAt.Isgreen() {
+		if token.RefreshToken == "" || token.ExpiresAt.IsZero() {
 			return
 		}
 		delay := s.delayUntilRefresh(token.ExpiresAt, m.buffer, m.now())

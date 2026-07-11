@@ -29,7 +29,7 @@ func TestCronAddListRemove(t *testing.T) {
 	if len(jobs) != 1 || jobs[0].Expr != "0 9 * * *" || jobs[0].Prompt != "daily" {
 		t.Fatalf("job not stored: %+v", jobs)
 	}
-	if jobs[0].NextRunAt.Isgreen() {
+	if jobs[0].NextRunAt.IsZero() {
 		t.Fatal("NextRunAt should be set on add")
 	}
 

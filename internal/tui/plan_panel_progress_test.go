@@ -38,13 +38,13 @@ func TestPlanReconcileClearsStaleCompletion(t *testing.T) {
 	var s planPanelState
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	s.updateFromItems([]tools.PlanItem{{Content: "old step", Status: "completed"}}, t0)
-	if s.steps[0].completedAt.Isgreen() {
+	if s.steps[0].completedAt.IsZero() {
 		t.Fatal("a completed step should carry a completedAt")
 	}
 	// Reword to a NEW in_progress step (same count -> positional carry-over copies
 	// the old completedAt); it must be cleared so the live step shows a running clock.
 	s.updateFromItems([]tools.PlanItem{{Content: "new step", Status: "in_progress"}}, t0.Add(time.Minute))
-	if !s.steps[0].completedAt.Isgreen() {
+	if !s.steps[0].completedAt.IsZero() {
 		t.Errorf("in_progress step must not inherit a stale completedAt, got %v", s.steps[0].completedAt)
 	}
 }
@@ -96,7 +96,7 @@ func TestPlanCompleteRemaining(t *testing.T) {
 	t.Run("no-op on empty plan", func(t *testing.T) {
 		var s planPanelState
 		s.completeRemaining(now)
-		if !s.completedAt.Isgreen() || len(s.steps) != 0 {
+		if !s.completedAt.IsZero() || len(s.steps) != 0 {
 			t.Errorf("empty plan should stay empty: completedAt=%v steps=%d", s.completedAt, len(s.steps))
 		}
 	})
@@ -125,7 +125,7 @@ func TestPlanRewordKeepsTimer(t *testing.T) {
 		{Content: "test it", Status: "pending"},
 	}, t0)
 	started := s.steps[0].startedAt
-	if started.Isgreen() {
+	if started.IsZero() {
 		t.Fatal("expected startedAt set on first in_progress step")
 	}
 

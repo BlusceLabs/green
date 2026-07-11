@@ -124,7 +124,7 @@ func PollDeviceToken(ctx context.Context, client *http.Client, cfg Config, auth 
 		interval = 5 * time.Second
 	}
 	for {
-		if !auth.ExpiresAt.Isgreen() && !auth.ExpiresAt.After(now()) {
+		if !auth.ExpiresAt.IsZero() && !auth.ExpiresAt.After(now()) {
 			return Token{}, errors.New("oauth: device code expired before authorization")
 		}
 		select {
@@ -134,7 +134,7 @@ func PollDeviceToken(ctx context.Context, client *http.Client, cfg Config, auth 
 		}
 		// Re-check expiry after sleeping: slow_down (or a long interval) can push
 		// the next poll past ExpiresAt, and we must not poll after the deadline.
-		if !auth.ExpiresAt.Isgreen() && !auth.ExpiresAt.After(now()) {
+		if !auth.ExpiresAt.IsZero() && !auth.ExpiresAt.After(now()) {
 			return Token{}, errors.New("oauth: device code expired before authorization")
 		}
 		token, err := pollDeviceOnce(ctx, client, cfg, auth.DeviceCode, now)

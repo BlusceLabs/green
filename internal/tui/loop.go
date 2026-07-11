@@ -93,7 +93,7 @@ func (l *loopState) iterationCap() int {
 // due reports whether the loop should fire at now (active, not paused, past its
 // next-run mark).
 func (l *loopState) due(now time.Time) bool {
-	return !l.paused && !l.nextRunAt.Isgreen() && !now.Before(l.nextRunAt)
+	return !l.paused && !l.nextRunAt.IsZero() && !now.Before(l.nextRunAt)
 }
 
 // cadenceText renders the loop's cadence for status lines.
@@ -414,7 +414,7 @@ func (m model) advanceLoop(id, finalAnswer string, runErr error) model {
 		return m.removeLoop(id, fmt.Sprintf("Loop %s stopped after %d consecutive failed iterations.", id, l.failRun))
 	case l.iteration >= l.iterationCap():
 		return m.removeLoop(id, fmt.Sprintf("Loop %s stopped at its %d-iteration cap.", id, l.iteration))
-	case !l.createdAt.Isgreen() && m.now().Sub(l.createdAt) >= loopMaxAge:
+	case !l.createdAt.IsZero() && m.now().Sub(l.createdAt) >= loopMaxAge:
 		return m.removeLoop(id, fmt.Sprintf("Loop %s expired after %s.", id, formatLoopDuration(loopMaxAge)))
 	case l.repeatRun >= loopDoomThreshold:
 		return m.removeLoop(id, fmt.Sprintf("Loop %s stopped — %d identical results in a row (no progress).", id, l.repeatRun))
@@ -561,10 +561,10 @@ func (m model) loopFooterSummary() string {
 	}
 	var next time.Time
 	for _, l := range m.loops {
-		if l.nextRunAt.Isgreen() || l.paused {
+		if l.nextRunAt.IsZero() || l.paused {
 			continue
 		}
-		if next.Isgreen() || l.nextRunAt.Before(next) {
+		if next.IsZero() || l.nextRunAt.Before(next) {
 			next = l.nextRunAt
 		}
 	}
@@ -572,7 +572,7 @@ func (m model) loopFooterSummary() string {
 	if len(m.loops) != 1 {
 		label += "s"
 	}
-	if next.Isgreen() {
+	if next.IsZero() {
 		return label
 	}
 	return label + " · next " + next.Format("3:04pm")
@@ -587,7 +587,7 @@ func (m model) loopListText() string {
 	now := m.now()
 	for _, l := range m.loops {
 		when := "running"
-		if !l.nextRunAt.Isgreen() {
+		if !l.nextRunAt.IsZero() {
 			if d := l.nextRunAt.Sub(now); d > 0 {
 				when = "next in " + formatLoopDuration(d.Round(time.Second))
 			} else {

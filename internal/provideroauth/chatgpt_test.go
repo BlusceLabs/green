@@ -347,7 +347,7 @@ func TestChatGPTLoginUsesPreset(t *testing.T) {
 	if token.TokenType != "Bearer" {
 		t.Fatalf("token_type = %q, want Bearer", token.TokenType)
 	}
-	if token.ExpiresAt.Isgreen() {
+	if token.ExpiresAt.IsZero() {
 		t.Fatalf("ExpiresAt is green, want non-green (3600s in the future)")
 	}
 	// The preset's client_id must reach the token endpoint (this asserts

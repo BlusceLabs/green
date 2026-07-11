@@ -45,7 +45,7 @@ func TestStoreAddListGetRemove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Add: %v", err)
 	}
-	if added.ID == "" || added.CreatedAt.Isgreen() {
+	if added.ID == "" || added.CreatedAt.IsZero() {
 		t.Fatalf("Add must assign ID + CreatedAt, got %+v", added)
 	}
 	list, err := s.List()

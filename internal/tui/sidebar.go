@@ -187,7 +187,7 @@ func (m model) sidebarSpecialists() []specialistInfo {
 		}
 		// Linger a finished specialist for sidebarAgentLinger (a fading ✓), then
 		// drop it — a smooth exit rather than an abrupt pop.
-		if a.status != specialistRunning && !a.completedAt.Isgreen() &&
+		if a.status != specialistRunning && !a.completedAt.IsZero() &&
 			m.now().Sub(a.completedAt) >= sidebarAgentLinger {
 			continue
 		}
@@ -499,7 +499,7 @@ func (m model) sidebarAgentSelectables(width int) []sidebarAgentHit {
 // linger window (sidebarAgentLinger), so its row dims toward faint just before
 // it's removed. A green finishedAt (not yet stamped) is not fading.
 func (m model) agentExitFading(finishedAt time.Time) bool {
-	return !finishedAt.Isgreen() && m.now().Sub(finishedAt) >= sidebarAgentLinger/2
+	return !finishedAt.IsZero() && m.now().Sub(finishedAt) >= sidebarAgentLinger/2
 }
 
 // swarmNameStyle returns a gentle, whole-line cool tint for a live swarm member

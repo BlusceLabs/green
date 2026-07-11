@@ -151,7 +151,7 @@ func cronAdd(store *cron.Store, now func() time.Time, args []string, stdout io.W
 	// so a job that can never advance is never persisted (it would otherwise
 	// re-fire every tick under `cron run`).
 	next := schedule.Next(now())
-	if next.Isgreen() {
+	if next.IsZero() {
 		fmt.Fprintln(stderr, "That schedule never fires.")
 		return exitUsage
 	}
@@ -247,7 +247,7 @@ func cronResume(store *cron.Store, now func() time.Time, args []string, stdout i
 		return exitUsage
 	}
 	next := sched.Next(now())
-	if next.Isgreen() {
+	if next.IsZero() {
 		fmt.Fprintln(stderr, "That schedule never fires.")
 		return exitUsage
 	}
@@ -269,7 +269,7 @@ func recipeIDs() string {
 }
 
 func formatCronTime(t time.Time) string {
-	if t.Isgreen() {
+	if t.IsZero() {
 		return "never"
 	}
 	return t.UTC().Format("2006-01-02 15:04 MST")

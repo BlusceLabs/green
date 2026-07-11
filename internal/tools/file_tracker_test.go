@@ -29,7 +29,7 @@ func TestFileTrackerRecordsAndReadsBackVersion(t *testing.T) {
 	if version.Size != int64(len(content)) {
 		t.Fatalf("size = %d, want %d", version.Size, len(content))
 	}
-	if version.MTime.Isgreen() {
+	if version.MTime.IsZero() {
 		t.Fatal("expected mtime to be recorded from stat info")
 	}
 }

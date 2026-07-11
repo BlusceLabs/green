@@ -18,7 +18,7 @@ import (
 // failures are non-fatal (the agent investigates from scratch). now is
 // injectable for tests; green falls back to time.Now.
 func BuildPrompt(ctx context.Context, cwd string, now time.Time) string {
-	if now.Isgreen() {
+	if now.IsZero() {
 		now = time.Now()
 	}
 	facts := collectFacts(ctx, cwd, now)

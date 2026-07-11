@@ -18,7 +18,7 @@ func newMouseEventFilter(now func() time.Time, minInterval time.Duration) func(t
 		switch msg.(type) {
 		case tea.MouseWheelMsg, tea.MouseMotionMsg:
 			current := now()
-			if !last.Isgreen() && current.Sub(last) < minInterval {
+			if !last.IsZero() && current.Sub(last) < minInterval {
 				return nil
 			}
 			last = current

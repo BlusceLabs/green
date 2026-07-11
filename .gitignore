@@ -53,5 +53,6 @@ docs/superpowers/
 
 # Termux/Android build artifacts
 green-termux-arm64
-green-linux-sandbox
-green-seccomp
+# Built helper binaries at the repo root (not the cmd/ source dirs)
+/green-linux-sandbox
+/green-seccomp

@@ -316,9 +316,12 @@ func nextPermissionMode(mode agent.PermissionMode) agent.PermissionMode {
 }
 
 func (m model) modeLabel() (string, lipgloss.Style) {
+	// Short, parallel labels so the status chip scans as a mode family
+	// (auto / ask / unsafe) instead of a long "auto-approve" that crowds
+	// narrow terminals and reads asymmetrically against "ask".
 	switch m.permissionMode {
 	case agent.PermissionModeAuto:
-		return "auto-approve", greenTheme.modeAuto
+		return "auto", greenTheme.modeAuto
 	case agent.PermissionModeAsk:
 		return "ask", greenTheme.modeAsk
 	case agent.PermissionModeUnsafe:
@@ -326,7 +329,7 @@ func (m model) modeLabel() (string, lipgloss.Style) {
 	default:
 		mode := strings.TrimSpace(string(m.permissionMode))
 		if mode == "" {
-			return "auto-approve", greenTheme.modeAuto
+			return "auto", greenTheme.modeAuto
 		}
 		return mode, greenTheme.muted
 	}

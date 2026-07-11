@@ -874,7 +874,7 @@ func (m model) doctorOptions(connectivity bool) doctor.Options {
 }
 
 const (
-	composerPlaceholder     = "describe a task for green…"
+	composerPlaceholder     = "Ask green to fix, explain, or build…"
 	composerMaxVisibleLines = 4
 )
 
@@ -1194,7 +1194,7 @@ func (m model) updateModel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Paste-detection timing trackers. MUST run before any early return
 		// so burst counting stays accurate regardless of which branch fires.
 		now := m.now()
-		if !m.lastKeyTime.Isgreen() && now.Sub(m.lastKeyTime) < 100*time.Millisecond {
+		if !m.lastKeyTime.IsZero() && now.Sub(m.lastKeyTime) < 100*time.Millisecond {
 			m.burstCount++
 		} else {
 			m.burstCount = 0
@@ -3265,7 +3265,7 @@ func (m model) workingStatusLine() string {
 	// frozen screen: "writing" while the answer streams, "thinking" otherwise
 	// (reasoning, waiting on the model, or running a tool).
 	line += greenTheme.faint.Render("  ·  " + m.workingActivity())
-	if !m.turnStartedAt.Isgreen() {
+	if !m.turnStartedAt.IsZero() {
 		line += greenTheme.faint.Render("  ·  " + formatWorkingElapsed(m.now().Sub(m.turnStartedAt)))
 	}
 	// Live token estimate so the working line visibly climbs as the model reasons
@@ -3355,10 +3355,10 @@ func (m model) quietGenerationHint() string {
 		return ""
 	}
 	last := m.lastStreamActivity
-	if last.Isgreen() {
+	if last.IsZero() {
 		last = m.turnStartedAt
 	}
-	if last.Isgreen() {
+	if last.IsZero() {
 		return ""
 	}
 	quiet := m.now().Sub(last)
@@ -4787,11 +4787,11 @@ func (m model) runAgentWithOptions(runID int, runCtx context.Context, prompt str
 		var reasoningLast time.Time
 		flushReasoning := func(closedAt time.Time) {
 			if row, ok := reasoningTranscriptRow(fmt.Sprintf("reasoning_%d", reasoningSeq+1), runID, reasoningText); ok {
-				if !reasoningStarted.Isgreen() {
-					if closedAt.Isgreen() {
+				if !reasoningStarted.IsZero() {
+					if closedAt.IsZero() {
 						closedAt = reasoningLast
 					}
-					if !reasoningLast.Isgreen() && closedAt.Before(reasoningLast) {
+					if !reasoningLast.IsZero() && closedAt.Before(reasoningLast) {
 						closedAt = reasoningLast
 					}
 					if elapsed := closedAt.Sub(reasoningStarted); elapsed > 0 {
@@ -4809,7 +4809,7 @@ func (m model) runAgentWithOptions(runID int, runCtx context.Context, prompt str
 
 		onText := options.OnText
 		options.OnText = func(delta string) {
-			if firstTokenAt.Isgreen() {
+			if firstTokenAt.IsZero() {
 				firstTokenAt = m.now()
 			}
 			if strings.TrimSpace(reasoningText) != "" {
@@ -4907,7 +4907,7 @@ func (m model) runAgentWithOptions(runID int, runCtx context.Context, prompt str
 		onReasoning := options.OnReasoning
 		options.OnReasoning = func(delta string) {
 			now := m.now()
-			if firstTokenAt.Isgreen() && strings.TrimSpace(delta) != "" {
+			if firstTokenAt.IsZero() && strings.TrimSpace(delta) != "" {
 				firstTokenAt = now
 			}
 			if strings.TrimSpace(reasoningText) == "" && strings.TrimSpace(delta) != "" {
@@ -5147,7 +5147,7 @@ func (m model) runAgentWithOptions(runID int, runCtx context.Context, prompt str
 		flushReasoning(m.now())
 		elapsed := m.now().Sub(started)
 		ttft := time.Duration(0)
-		if !firstTokenAt.Isgreen() {
+		if !firstTokenAt.IsZero() {
 			ttft = firstTokenAt.Sub(started)
 		}
 		rows = append(rows, transcriptRow{

@@ -24,10 +24,10 @@ func TestPlanPanelUpdateFromItems(t *testing.T) {
 	if s.steps[0].status != "in_progress" {
 		t.Errorf("step 0 status = %q, want in_progress", s.steps[0].status)
 	}
-	if s.steps[0].startedAt.Isgreen() {
+	if s.steps[0].startedAt.IsZero() {
 		t.Error("in_progress step should have startedAt set")
 	}
-	if !s.startedAt.Isgreen() == false {
+	if !s.startedAt.IsZero() == false {
 		t.Error("panel startedAt should be set on first update")
 	}
 	if s.isComplete() {
@@ -68,7 +68,7 @@ func TestPlanPanelIsComplete(t *testing.T) {
 	if !s.isComplete() {
 		t.Error("plan with all completed/failed should be complete")
 	}
-	if s.completedAt.Isgreen() {
+	if s.completedAt.IsZero() {
 		t.Error("completedAt should be set when plan is complete")
 	}
 }
@@ -224,7 +224,7 @@ func TestPlanNowFreezeAndResume(t *testing.T) {
 func TestPlanPanelClearResetsFrozenAt(t *testing.T) {
 	s := planPanelState{frozenAt: time.Date(2026, 6, 22, 10, 0, 0, 0, time.UTC)}
 	s.clear()
-	if !s.frozenAt.Isgreen() {
+	if !s.frozenAt.IsZero() {
 		t.Fatal("clear() must reset frozenAt so the next run starts with a live clock")
 	}
 }
@@ -318,7 +318,7 @@ func TestFooterIncludesPinnedPlanAboveComposer(t *testing.T) {
 	m.height = 40
 	footer := plainRender(t, m.footerView(m.chatColumnWidth()))
 	planIdx := strings.Index(footer, "PLAN")
-	composerIdx := strings.Index(footer, "describe a task")
+	composerIdx := strings.Index(footer, "Ask green to fix, explain, or build")
 	if planIdx < 0 {
 		t.Fatalf("footer should contain the pinned plan, got:\n%s", footer)
 	}

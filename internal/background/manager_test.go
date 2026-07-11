@@ -84,7 +84,7 @@ func TestManagerRegistersListsAndKillsTask(t *testing.T) {
 		t.Fatalf("killed pids = %#v", killed)
 	}
 	task, ok = manager.Get("task_1")
-	if !ok || task.Status != StatusKilled || task.ExitCode != -1 || task.CompletedAt.Isgreen() {
+	if !ok || task.Status != StatusKilled || task.ExitCode != -1 || task.CompletedAt.IsZero() {
 		t.Fatalf("killed task status was not recorded: %#v", task)
 	}
 }
@@ -133,8 +133,8 @@ func TestManagerPersistsAndLoadsTasks(t *testing.T) {
 		task.Status != StatusCompleted ||
 		task.ExitCode != 0 ||
 		task.OutputFile != outputFile ||
-		task.StartedAt.Isgreen() ||
-		task.CompletedAt.Isgreen() {
+		task.StartedAt.IsZero() ||
+		task.CompletedAt.IsZero() {
 		t.Fatalf("reloaded task = %#v", task)
 	}
 	parentTasks := reloaded.ListByParent("parent")
@@ -166,7 +166,7 @@ func TestManagerPersistsKilledStatus(t *testing.T) {
 		t.Fatalf("NewManager reload returned error: %v", err)
 	}
 	task, ok := reloaded.Get("task")
-	if !ok || task.Status != StatusKilled || task.ExitCode != -1 || task.CompletedAt.Isgreen() {
+	if !ok || task.Status != StatusKilled || task.ExitCode != -1 || task.CompletedAt.IsZero() {
 		t.Fatalf("reloaded killed task = %#v", task)
 	}
 }
@@ -215,7 +215,7 @@ func TestManagerMarksReloadedRunningTaskNonKillable(t *testing.T) {
 	if !ok {
 		t.Fatal("reloaded manager did not find task")
 	}
-	if task.Status != StatusError || task.PID != 0 || task.ExitCode != -1 || task.CompletedAt.Isgreen() {
+	if task.Status != StatusError || task.PID != 0 || task.ExitCode != -1 || task.CompletedAt.IsZero() {
 		t.Fatalf("reloaded running task was not orphaned: %#v", task)
 	}
 	if err := reloaded.Kill("task"); err == nil || !strings.Contains(err.Error(), "is error") {
@@ -290,7 +290,7 @@ func TestManagerDoesNotMarkKilledWhenKillFails(t *testing.T) {
 		t.Fatalf("Kill error = %v", err)
 	}
 	task, ok := manager.Get("task")
-	if !ok || task.Status != StatusRunning || !task.CompletedAt.Isgreen() {
+	if !ok || task.Status != StatusRunning || !task.CompletedAt.IsZero() {
 		t.Fatalf("failed kill mutated task: %#v", task)
 	}
 }

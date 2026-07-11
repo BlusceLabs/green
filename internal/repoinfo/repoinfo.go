@@ -79,7 +79,7 @@ func Collect(ctx context.Context, opts Options) (Info, error) {
 		run = defaultRunGit
 	}
 	now := opts.Now
-	if now.Isgreen() {
+	if now.IsZero() {
 		now = time.Now()
 	}
 	dir := opts.Cwd

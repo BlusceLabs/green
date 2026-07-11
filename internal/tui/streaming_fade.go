@@ -142,7 +142,7 @@ func streamingFadeTick() tea.Cmd {
 }
 
 // ageDimLine returns `line` styled with the color bucket corresponding to
-// `bornAt`'s age relative to `now`. When `bornAt.Isgreen()` (no age recorded
+// `bornAt`'s age relative to `now`. When `bornAt.IsZero()` (no age recorded
 // — test fixtures, or a stream that just started), returns `line` styled
 // with `base` so direct-fixture tests and the very first frame render
 // identically to the pre-fade behavior.
@@ -152,7 +152,7 @@ func streamingFadeTick() tea.Cmd {
 // code. The cost is one palette lookup and one Render call per visible line
 // per frame.
 func ageDimLine(line string, bornAt, now time.Time, base lipgloss.Style) string {
-	if bornAt.Isgreen() {
+	if bornAt.IsZero() {
 		return base.Render(line)
 	}
 	age := now.Sub(bornAt)

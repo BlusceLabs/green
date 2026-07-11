@@ -333,6 +333,78 @@ var everforestPalette = palette{
 	cardPerm:  "#96896b",
 }
 
+// carbonPalette — Carbon (IBM Carbon design language) dark: a true neutral
+// graphite surface (#161616) with the Carbon blue-60 accent (#78a9ff) and the
+// fixed IBM support wheel (green/red/amber/cyan). Carbon's discipline is
+// neutral: no hue in the grays, so the accent and signals carry all the color
+// and never fight the chrome. The grays are the Carbon text-01..04 steps; the
+// accent and diff bands lean on Carbon's own success/error/warning tokens so
+// the theme reads as "system UI", not "tinted terminal".
+var carbonPalette = palette{
+	panel:     "#161616", // Carbon gray-100 — the only surface we paint
+	promptBg:  "#262626", // Carbon gray-90 — submitted-prompt fill
+	line:      "#393939", // Carbon gray-80 — default borders, rules
+	line2:     "#525252", // Carbon gray-70 — emphasized borders
+	ink:       "#f4f4f4", // Carbon text-01
+	muted:     "#c6c6c6", // Carbon text-02
+	faint:     "#a8a8a8", // Carbon text-03
+	faintest:  "#8d8d8d", // Carbon text-04 — pinned to AA on the graphite panel
+	accent:    "#78a9ff", // Carbon blue-60
+	green:     "#42be65", // Carbon support-success
+	red:       "#ff8389", // Carbon support-error (bright)
+	amber:     "#f1c21b", // Carbon support-warning
+	blue:      "#33b1ff", // Carbon support-info
+	gitAdd:    "#42be65",
+	gitDel:    "#ff8389",
+	addBg:     "#0c2e20",
+	delBg:     "#3a1318",
+	addBgWord: "#145c3a", // changed span within an added line — brighter green (sep 1.84 vs addBg)
+	delBgWord: "#5a1f26", // changed span within a deleted line — brighter red (sep 1.29 vs delBg)
+	permBg:    "#1c1a16",
+	selBg:     "#243b53", // selected row bg — steel blue, ink 10.5:1, sep 1.57 vs panel
+	addInk:    "#a7f0ba",
+	delInk:    "#ffd7d9",
+	onAccent:  "#000000",
+	cardRun:   "#2e6f4f",
+	cardErr:   "#7a3a3f",
+	cardPerm:  "#6f5a2a",
+}
+
+// lightCarbonPalette — Carbon (IBM Carbon) light: the same neutral graphite
+// discipline inverted — a near-white page (#f4f4f4) with the Carbon blue-70
+// accent (#0f62fe) and the darkened support wheel (the light-theme tokens must
+// clear AA on white, so green/red/amber shift to Carbon's -60/-70 steps while
+// the grays keep their text-01..04 ordering, darkest ink → lightest surface).
+var lightCarbonPalette = palette{
+	panel:     "#f4f4f4",
+	promptBg:  "#e0e0e0",
+	line:      "#c6c6c6",
+	line2:     "#a8a8a8",
+	ink:       "#161616",
+	muted:     "#525252",
+	faint:     "#6a6a6a",
+	faintest:  "#6f6f6f",
+	accent:    "#0f62fe",
+	green:     "#0e6027",
+	red:       "#da1e28",
+	amber:     "#8e6a00",
+	blue:      "#0043ce",
+	gitAdd:    "#0e6027",
+	gitDel:    "#da1e28",
+	addBg:     "#e6f3ec",
+	delBg:     "#fbe6e8",
+	addBgWord: "#aedcc4",
+	delBgWord: "#f3c4c8",
+	permBg:    "#f0e6c8",
+	selBg:     "#bcd2ee",
+	addInk:    "#0e6027",
+	delInk:    "#a2191f",
+	onAccent:  "#ffffff",
+	cardRun:   "#4d9e74",
+	cardErr:   "#b5656b",
+	cardPerm:  "#b0913f",
+}
+
 // lightPalette is dark-on-light: a warm cream surface (so cards lift off the
 // terminal page, which green never paints) with near-black ink and an olive-lime
 // accent that keeps the brand identity while clearing AA on the light panel. The
@@ -426,7 +498,9 @@ var themeRegistry = []themeEntry{
 	{Name: "solarized-dark", Label: "Solarized Dark", Palette: solarizedDarkPalette, IsDark: true},
 	{Name: "rose-pine", Label: "Rosé Pine", Palette: rosePinePalette, IsDark: true},
 	{Name: "everforest", Label: "Everforest", Palette: everforestPalette, IsDark: true},
+	{Name: "carbon", Label: "Carbon", Palette: carbonPalette, IsDark: true},
 	{Name: "light", Label: "light", Palette: lightPalette, IsDark: false},
+	{Name: "carbon-light", Label: "Carbon Light", Palette: lightCarbonPalette, IsDark: false},
 	{Name: "solarized-light", Label: "Solarized Light", Palette: solarizedLightPalette, IsDark: false},
 }
 

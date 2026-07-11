@@ -351,7 +351,7 @@ func TestSuggestionOverlayStaysVisibleWhenTranscriptScrolled(t *testing.T) {
 		case strings.Contains(line, "Commands"):
 			paletteLine = index
 		case strings.Contains(line, "no model"):
-			// The composer rule shows the model; the mode ("auto-approve") is now on
+			// The composer rule shows the model; the mode ("auto") is now on
 			// the status line below it, so locate the composer by its model label.
 			composerLine = index
 		}

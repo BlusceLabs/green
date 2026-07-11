@@ -119,7 +119,7 @@ func reconcileOverdue(store *cron.Store, now func() time.Time, ids []string, std
 			continue // not strictly overdue
 		}
 		if sched, perr := cron.Parse(j.Expr); perr == nil {
-			if nxt := sched.Next(now()); !nxt.Isgreen() {
+			if nxt := sched.Next(now()); !nxt.IsZero() {
 				j.NextRunAt = nxt
 				if err := store.Update(j); err != nil {
 					fmt.Fprintf(stderr, "warning: failed to reschedule %s: %v\n", j.ID, err)
@@ -187,7 +187,7 @@ func fireJob(store *cron.Store, now func() time.Time, job cron.Job, stdout io.Wr
 		if rec.Error == "" {
 			rec.Error = "invalid schedule; job paused: " + perr.Error()
 		}
-	} else if nxt := sched.Next(fired.Truncate(time.Minute)); nxt.Isgreen() {
+	} else if nxt := sched.Next(fired.Truncate(time.Minute)); nxt.IsZero() {
 		job.Status = cron.StatusPaused
 		if rec.Error == "" {
 			rec.Error = "schedule no longer fires; job paused"
@@ -261,7 +261,7 @@ func claimFire(store *cron.Store, fired time.Time, id string) (bool, error) {
 		// only engages for a minute-aligned `after`) actually fires, instead of
 		// double-firing the repeated wall-clock hour (AUDIT-M4).
 		if sched, perr := cron.Parse(current.Expr); perr == nil {
-			if nxt := sched.Next(fired.Truncate(time.Minute)); !nxt.Isgreen() {
+			if nxt := sched.Next(fired.Truncate(time.Minute)); !nxt.IsZero() {
 				current.NextRunAt = nxt // advance to claim; concurrent schedulers now skip
 				return current, nil
 			}

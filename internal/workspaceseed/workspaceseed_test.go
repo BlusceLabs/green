@@ -37,7 +37,7 @@ func TestBuildOrdersAndClassifiesWorkspaceSeed(t *testing.T) {
 	if got.GitSummary != "dirty: 3 modified, 1 untracked" {
 		t.Fatalf("GitSummary=%q", got.GitSummary)
 	}
-	if want := []string{"AGENTS.md", "README.md", "green.md", "cmd/", "docs/", "go.mod", "internal/", "package.json"}; !reflect.DeepEqual(got.Layout, want) {
+	if want := []string{"AGENTS.md", "README.md", "cmd/", "docs/", "go.mod", "green.md", "internal/", "package.json"}; !reflect.DeepEqual(got.Layout, want) {
 		t.Fatalf("Layout=%v want %v", got.Layout, want)
 	}
 	if want := []string{"README.md", "go.mod", "package.json", "AGENTS.md", "docs/INSTALL.md", "docs/STREAM_JSON_PROTOCOL.md"}; !reflect.DeepEqual(got.ProjectFiles, want) {

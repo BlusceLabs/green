@@ -213,7 +213,7 @@ func (manager *Manager) UpdateStatus(taskID string, status Status, exitCode int)
 	task.ExitCode = exitCode
 	if status == StatusRunning {
 		task.CompletedAt = time.Time{}
-	} else if task.CompletedAt.Isgreen() {
+	} else if task.CompletedAt.IsZero() {
 		task.CompletedAt = manager.now()
 	}
 	if err := manager.persistTaskLocked(task); err != nil {
@@ -240,7 +240,7 @@ func (manager *Manager) MarkExited(taskID string, status Status, exitCode int) e
 	}
 	task.Status = status
 	task.ExitCode = exitCode
-	if task.CompletedAt.Isgreen() {
+	if task.CompletedAt.IsZero() {
 		task.CompletedAt = manager.now()
 	}
 	if err := manager.persistTaskLocked(task); err != nil {
@@ -348,7 +348,7 @@ func (manager *Manager) markKilledIfStillRunning(taskID string, pid int) (bool, 
 	}
 	task.Status = StatusKilled
 	task.ExitCode = -1
-	if task.CompletedAt.Isgreen() {
+	if task.CompletedAt.IsZero() {
 		task.CompletedAt = manager.now()
 	}
 	if err := manager.persistTaskLocked(task); err != nil {
@@ -463,7 +463,7 @@ func (manager *Manager) normalizeLoadedTask(fileTaskID string, task Task) (Task,
 		task.Status = StatusError
 		task.PID = 0
 		task.ExitCode = -1
-		if task.CompletedAt.Isgreen() {
+		if task.CompletedAt.IsZero() {
 			task.CompletedAt = manager.now()
 		}
 		changed = true

@@ -63,7 +63,7 @@ func TestRequestDeviceCodeDefaultsInterval(t *testing.T) {
 	}
 	// A response without expires_in must still get a bounded expiry (fail closed),
 	// so the poll loop's expiry gate stays active.
-	if auth.ExpiresAt.Isgreen() {
+	if auth.ExpiresAt.IsZero() {
 		t.Fatal("missing expires_in must default to a bounded ExpiresAt, got green")
 	}
 }

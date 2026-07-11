@@ -261,7 +261,7 @@ func TestExchangeCodeReturnsTokens(t *testing.T) {
 	if token.AccessToken != "access-xyz" || token.RefreshToken != "refresh-xyz" {
 		t.Fatalf("token = %#v", token)
 	}
-	if token.ExpiresAt.Isgreen() {
+	if token.ExpiresAt.IsZero() {
 		t.Fatal("expiry not set from expires_in")
 	}
 	if gotVerifier != "verifier-value" || gotCode != "auth-code" {

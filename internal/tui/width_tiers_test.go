@@ -75,7 +75,7 @@ func TestWidthTierSegments(t *testing.T) {
 		if strings.Contains(status, "interactive") || strings.Contains(status, "claude-sonnet-4.5") {
 			t.Errorf("width %d: status should not include surface or model (%q)", tc.width, status)
 		}
-		if !strings.Contains(status, "auto-approve") {
+		if !strings.Contains(status, "auto") {
 			t.Errorf("width %d: status should show the permission mode (%q)", tc.width, status)
 		}
 		divider := plainRender(t, m.composerDividerLine(tc.width))
@@ -83,7 +83,8 @@ func TestWidthTierSegments(t *testing.T) {
 		if !strings.Contains(divider, "claude-sonnet-4.5") {
 			t.Errorf("width %d: composer divider must keep the model label (%q)", tc.width, divider)
 		}
-		if strings.Contains(divider, "auto-approve") {
+		// Mode lives only on the status line; the divider is model-only.
+		if strings.Contains(divider, "ask") || strings.Contains(divider, "unsafe") {
 			t.Errorf("width %d: composer divider should no longer show the mode (%q)", tc.width, divider)
 		}
 	}
@@ -96,7 +97,7 @@ func TestTinyTierSingleSegmentAndRailLessCards(t *testing.T) {
 	status := plainRender(t, m.statusLine(40))
 	// Tiny status shows the permission-mode chip (the safety-relevant run-state),
 	// not the provider or model.
-	if !strings.Contains(status, "auto-approve") {
+	if !strings.Contains(status, "auto") {
 		t.Fatalf("tiny status = %q, want the permission-mode chip", status)
 	}
 	if strings.Contains(status, "anthropic") || strings.Contains(status, "claude-sonnet-4.5") {
@@ -105,9 +106,6 @@ func TestTinyTierSingleSegmentAndRailLessCards(t *testing.T) {
 	divider := plainRender(t, m.composerDividerLine(40))
 	if !strings.Contains(divider, "claude-sonnet-4.5") {
 		t.Fatalf("tiny composer divider = %q, want the model label", divider)
-	}
-	if strings.Contains(divider, "auto-approve") {
-		t.Fatalf("tiny composer divider = %q, mode should have moved to the status line", divider)
 	}
 
 	row := transcriptRow{kind: rowToolResult, id: "c", tool: "grep", status: tools.StatusOK, detail: "a.go:1: x"}
