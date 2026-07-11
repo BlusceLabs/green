@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once the first release is
 tagged. Until then, source builds report the version `dev`.
 
+## [0.3.1](https://github.com/BlusceLabs/green/compare/v0.3.0...v0.3.1) (2026-07-11)
+
+
+### Features
+
+* **tui:** add Carbon (dark/light) and high-contrast a11y themes ([c2fe4a5](https://github.com/BlusceLabs/green/commit/c2fe4a5))
+
+### Bug Fixes
+
+* lowercase npm package scope to @bluscelabs/green so the published package and postinstall resolve match ([bb2a081](https://github.com/BlusceLabs/green/commit/bb2a081))
+
 ## [0.3.0](https://github.com/BlusceLabs/green/compare/v0.2.0...v0.3.0) (2026-07-09)
 
 
