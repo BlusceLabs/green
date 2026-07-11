@@ -102,11 +102,10 @@ jobs:
   # GitHub Release, so publishing before the assets exist would ship a package
   # that fails to install.
   #
-  # Auth is npm OIDC trusted publishing: no NPM_TOKEN secret. The package's
-  # npmjs.com settings must list this repo + workflow file as a trusted
-  # publisher, and provenance is then generated automatically. Note npm only
-  # allows configuring a trusted publisher on an EXISTING package, so the very
-  # first @bluscelabs/green publish is a one-time manual `npm publish` bootstrap.
+  # Auth is a classic npm automation token (the NPM_TOKEN repo secret), written
+  # to ~/.npmrc by the "Configure npm auth" step below. This avoids the npm
+  # trusted-publisher bootstrap gap that blocked OIDC and needs no npmjs.com web
+  # config. (Token auth can't generate provenance, by design.)
   publish-npm:
     name: Publish npm package
     needs: package
@@ -120,25 +119,33 @@ jobs:
       url: https://www.npmjs.com/package/@bluscelabs/green
     permissions:
       contents: read
-      id-token: write # OIDC token exchange for npm trusted publishing + provenance
+    env:
+      # Injected into ~/.npmrc as a reference (not the literal value) by the
+      # "Configure npm auth" step, so the secret never hits disk or the logs.
+      NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      # No registry-url here on purpose: setup-node's registry-url writes an
-      # .npmrc line referencing $NODE_AUTH_TOKEN, and npm hard-fails on the
-      # unset env var. Trusted publishing needs no token at all.
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
 
-      # OIDC trusted publishing needs npm >= 11.5.1. Use the npm bundled with
-      # the pinned Node toolchain (Node 24 ships >= 11.5.1) rather than pulling
-      # npm@latest from the registry inside the publish path — an unpinned
-      # install there would be avoidable supply-chain exposure. Fail fast if a
-      # future runner/toolchain change ever regresses the bundled npm.
-      - name: Check npm supports trusted publishing
+      # Write ~/.npmrc referencing the $NODE_AUTH_TOKEN env var (set from the
+      # NPM_TOKEN repo secret above). npm reads the env var at publish time; the
+      # secret value itself is never written to disk or the logs.
+      - name: Configure npm auth
+        run: |
+          cat >> ~/.npmrc <<'EOF'
+          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          EOF
+
+      # Token auth needs a reasonably modern npm, but there's no trusted-publishing
+      # floor. Still pin to the Node-bundled npm (Node 24 ships a current one)
+      # rather than pulling npm@latest from the registry in the publish path —
+      # an unpinned install there would be avoidable supply-chain exposure.
+      - name: Check npm version
         run: |
           npm --version | node -e '
             const version = require("fs").readFileSync(0, "utf8").trim();
@@ -148,12 +155,12 @@ jobs:
               (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)));
             if (!ok) {
               console.error(
-                `::error::bundled npm ${version} is too old for OIDC trusted ` +
-                  `publishing (needs >= 11.5.1) — bump node-version in this job.`,
+                `::error::bundled npm ${version} is unexpectedly old — bump ` +
+                  `node-version in this job.`,
               );
               process.exit(1);
             }
-            console.log(`npm ${version} supports trusted publishing.`);
+            console.log(`npm ${version} is current enough for token auth.`);
           '
 
       # Probe the exact URLs postinstall will build (internal/release/release.go
@@ -181,4 +188,4 @@ jobs:
           echo "all release assets for v${version} are publicly downloadable."
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --registry=https://registry.npmjs.org/
