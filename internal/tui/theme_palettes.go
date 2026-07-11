@@ -16,6 +16,42 @@ import "strings"
 // darkPalette is the original Lime palette: a near-black chat surface with one
 // lime accent. bg (#070708) is the terminal's own canvas — deliberately never
 // painted — so no token references it.
+// contrastPalette — an explicit high-contrast accessibility theme: a pure-black
+// surface (#000000) with a near-white ink/gray ramp and a bright lime accent, so
+// low-vision users get maximum separation without relying on the per-token
+// tuning the decorative themes need. Every text token clears AA by a wide margin
+// on black; the gray ramp still orders ink→faintest→panel so hierarchy reads
+// without color. Sits first in the dark group as the featured a11y option.
+var contrastPalette = palette{
+	panel:     "#000000",
+	promptBg:  "#0a0a0a",
+	line:      "#3a3a3a",
+	line2:     "#5a5a5a",
+	ink:       "#ffffff",
+	muted:     "#e6e6e6",
+	faint:     "#cfcfcf",
+	faintest:  "#b3b3b3",
+	accent:    "#d6ff3d",
+	green:     "#5dffa0",
+	red:       "#ff8a8a",
+	amber:     "#ffe066",
+	blue:      "#8ad4ff",
+	gitAdd:    "#5dffa0",
+	gitDel:    "#ff8a8a",
+	addBg:     "#00321f",
+	delBg:     "#3a0d10",
+	addBgWord: "#0a5c3a",
+	delBgWord: "#641e26",
+	permBg:    "#1a1500",
+	selBg:     "#2a3a00",
+	addInk:    "#c8ffdf",
+	delInk:    "#ffd6d6",
+	onAccent:  "#000000",
+	cardRun:   "#6a7a2e",
+	cardErr:   "#7a3a3a",
+	cardPerm:  "#7a6a2e",
+}
+
 var darkPalette = palette{
 	panel:     "#0e0e10",
 	promptBg:  "#262626",
@@ -488,6 +524,7 @@ type themeEntry struct {
 // dark/light built-ins leading their groups. themeModes (theme_select.go) prepends
 // `auto` to this. Append here to add a theme — nothing else needs editing.
 var themeRegistry = []themeEntry{
+	{Name: "contrast", Label: "Contrast", Palette: contrastPalette, IsDark: true},
 	{Name: "dark", Label: "dark", Palette: darkPalette, IsDark: true},
 	{Name: "dracula", Label: "Dracula", Palette: draculaPalette, IsDark: true},
 	{Name: "nord", Label: "Nord", Palette: nordPalette, IsDark: true},
