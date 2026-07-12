@@ -21,6 +21,18 @@ import (
 	"github.com/BlusceLabs/green/internal/greenruntime"
 )
 
+// TestMain isolates the per-user config dir for the whole package so the token
+// budget tracker (persisted under XDG_CONFIG_HOME/green) cannot leak state
+// across tests or across separate `go test ./...` invocations on a shared
+// runner. Tests that need a specific config dir call t.Setenv("XDG_CONFIG_HOME",
+// ...) themselves, which overrides this default.
+func TestMain(m *testing.M) {
+	if dir, err := os.MkdirTemp("", "green-cli-config"); err == nil {
+		os.Setenv("XDG_CONFIG_HOME", dir)
+	}
+	os.Exit(m.Run())
+}
+
 func TestRunExecHelpDocumentsM1Flags(t *testing.T) {
 	for _, args := range [][]string{
 		{"exec", "--help"},
