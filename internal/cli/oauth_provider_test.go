@@ -20,7 +20,7 @@ func TestExchangeCopilotToken(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		expiry := time.Now().Add(time.Hour).Unix()
-		_, _ = w.Write([]byte(`{"token":"copilot-abc","expires_at":` + itoa(expiry) + `}`))
+		_, _ = w.Write([]byte(`{"token":"copilot-abc","expires_at":` + itoa64(expiry) + `}`))
 	}))
 	defer srv.Close()
 
@@ -54,7 +54,7 @@ func TestExchangeCopilotTokenUnauthorized(t *testing.T) {
 	}
 }
 
-func itoa(i int64) string {
+func itoa64(i int64) string {
 	if i == 0 {
 		return "0"
 	}

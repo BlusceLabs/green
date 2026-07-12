@@ -105,7 +105,7 @@ Review.`)
 	_, err = ParseMarkdown(`---
 name: reviewer
 description: Reviews code
-reasoningEffort: ULTRA
+reasoningEffort: BANANA
 ---
 Review.`)
 	if err == nil || !strings.Contains(err.Error(), "unknown reasoning effort") {

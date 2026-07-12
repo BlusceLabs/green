@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -17,6 +18,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/BlusceLabs/green/internal/agent"
+	"github.com/BlusceLabs/green/internal/budget"
 	"github.com/BlusceLabs/green/internal/config"
 	"github.com/BlusceLabs/green/internal/doctor"
 	"github.com/BlusceLabs/green/internal/errhint"
@@ -4179,6 +4181,9 @@ func (m model) handleSubmit() (tea.Model, tea.Cmd) {
 		}
 		m.transcript = reduceTranscript(m.transcript, transcriptAction{kind: actionAppendSystem, text: m.skillsText()})
 		return m, nil
+	case commandBudget:
+		m.transcript = reduceTranscript(m.transcript, transcriptAction{kind: actionAppendSystem, text: renderBudgetCommand(command.text)})
+		return m, nil
 	case commandMCP:
 		if strings.TrimSpace(command.text) == "" {
 			return m.openMCPManager(), nil
@@ -5335,4 +5340,76 @@ func toolResultRowText(result agent.ToolResult) string {
 		status = tools.StatusOK
 	}
 	return fmt.Sprintf("tool result: %s %s %s", result.Name, status, truncateTUIOutput(result.Output, tuiToolOutputLimit))
+}
+
+// renderBudgetCommand handles the in-chat /budget command: it reports or
+// changes the daily token budget via the same persisted tracker the CLI and
+// agent loop use.
+func renderBudgetCommand(text string) string {
+	args := strings.Fields(strings.TrimSpace(text))
+	dir, err := config.UserConfigDir()
+	if err != nil {
+		dir = ""
+	}
+	t, err := budget.New(dir)
+	if err != nil {
+		t, _ = budget.New("")
+	}
+	if v := os.Getenv("GREEN_TOKEN_BUDGET"); v != "" {
+		if n, e := strconv.Atoi(strings.TrimSpace(v)); e == nil && n > 0 && t.Limit() == 0 {
+			_ = t.SetLimit(n)
+		}
+	}
+	cmd := "status"
+	if len(args) > 0 {
+		cmd = args[0]
+	}
+	switch cmd {
+	case "set":
+		if len(args) < 2 {
+			return "usage: /budget set <tokens-per-day>"
+		}
+		n, e := strconv.Atoi(args[1])
+		if e != nil || n < 0 {
+			return "limit must be a non-negative integer"
+		}
+		if e := t.SetLimit(n); e != nil {
+			return "error: " + e.Error()
+		}
+		return fmt.Sprintf("Daily token budget set to %d tokens.", n)
+	case "reset":
+		if e := t.Reset(); e != nil {
+			return "error: " + e.Error()
+		}
+		return "Today's token usage reset."
+	case "override":
+		on := true
+		if len(args) > 1 {
+			switch args[1] {
+			case "on", "true", "1":
+				on = true
+			case "off", "false", "0":
+				on = false
+			default:
+				return "usage: /budget override [on|off]"
+			}
+		}
+		if e := t.SetOverride(on); e != nil {
+			return "error: " + e.Error()
+		}
+		if on {
+			return "Budget override enabled."
+		}
+		return "Budget override disabled."
+	default:
+		s := t.Status()
+		if s.Limit == 0 {
+			return fmt.Sprintf("Daily token budget: unlimited (tracking %d tokens today).", s.Used)
+		}
+		status := "ok"
+		if s.Over {
+			status = "OVER LIMIT"
+		}
+		return fmt.Sprintf("Daily token budget for %s:\n  used: %d\n  limit: %d\n  remaining: %d\n  status: %s", s.Date, s.Used, s.Limit, s.Remaining, status)
+	}
 }

@@ -147,6 +147,7 @@ func Resolve(options ResolveOptions) (ResolvedConfig, error) {
 		MaxTurns:       cfg.MaxTurns,
 		MCP:            cfg.MCP,
 		Sandbox:        cfg.Sandbox,
+		Remote:         cfg.Remote,
 		Notify:         cfg.Notify,
 		Tools:          cfg.Tools,
 		Swarm:          cfg.Swarm,
@@ -708,6 +709,49 @@ func applyOverrides(cfg *FileConfig, overrides Overrides) {
 		mergeProvider(cfg, overrides.Provider)
 	}
 	mergeMCPConfig(&cfg.MCP, overrides.MCP)
+	mergeRemoteConfig(&cfg.Remote, overrides.Remote)
+}
+
+// mergeRemoteConfig overlays any set field of src onto dst. Each field uses an
+// empty-string/zero-value sentinel for "unset", matching the other section
+// mergers' intent detection.
+func mergeRemoteConfig(dst *RemoteConfig, src RemoteConfig) {
+	if b := strings.TrimSpace(src.Backend); b != "" {
+		dst.Backend = b
+	}
+	if img := strings.TrimSpace(src.DockerImage); img != "" {
+		dst.DockerImage = img
+	}
+	if len(src.DockerArgs) > 0 {
+		dst.DockerArgs = append(append([]string{}, dst.DockerArgs...), src.DockerArgs...)
+	}
+	if h := strings.TrimSpace(src.SSHHost); h != "" {
+		dst.SSHHost = h
+	}
+	if len(src.SSHArgs) > 0 {
+		dst.SSHArgs = append(append([]string{}, dst.SSHArgs...), src.SSHArgs...)
+	}
+	if img := strings.TrimSpace(src.SingularityImage); img != "" {
+		dst.SingularityImage = img
+	}
+	if len(src.SingularityArgs) > 0 {
+		dst.SingularityArgs = append(append([]string{}, dst.SingularityArgs...), src.SingularityArgs...)
+	}
+	if a := strings.TrimSpace(src.ModalApp); a != "" {
+		dst.ModalApp = a
+	}
+	if len(src.ModalArgs) > 0 {
+		dst.ModalArgs = append(append([]string{}, dst.ModalArgs...), src.ModalArgs...)
+	}
+	if t := strings.TrimSpace(src.DaytonaTarget); t != "" {
+		dst.DaytonaTarget = t
+	}
+	if len(src.DaytonaArgs) > 0 {
+		dst.DaytonaArgs = append(append([]string{}, dst.DaytonaArgs...), src.DaytonaArgs...)
+	}
+	if r := strings.TrimSpace(src.WorkspaceRoot); r != "" {
+		dst.WorkspaceRoot = r
+	}
 }
 
 func mergeLocalControlConfig(dst *LocalControlConfig, src LocalControlConfig) {

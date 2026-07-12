@@ -168,6 +168,7 @@ func runExecSpecDraft(run execSpecDraftRun) int {
 			}
 			sessionRecorder.append(sessions.EventToolResult, payload)
 		},
+		Budget:  loadBudgetTracker(),
 		OnUsage: func(u agent.Usage) {
 			writer.usage(u)
 			sessionRecorder.append(sessions.EventUsage, usage.EventUsagePayload(u))

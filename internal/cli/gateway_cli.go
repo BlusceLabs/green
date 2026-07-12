@@ -73,7 +73,11 @@ func runGatewayStart(args []string, stdout io.Writer, stderr io.Writer, deps app
 		if strings.TrimSpace(token) == "" {
 			return writeExecUsageError(stderr, "telegram transport requires --token or GREEN_TELEGRAM_TOKEN")
 		}
-		t = gateway.NewTelegramTransport(token)
+		tg := gateway.NewTelegramTransport(token)
+		if access, aerr := gateway.LoadTelegramAccess(gateway.DefaultTelegramAccessDir()); aerr == nil {
+			tg.Access = access
+		}
+		t = tg
 	case "discord":
 		if strings.TrimSpace(token) == "" {
 			token = os.Getenv("GREEN_DISCORD_TOKEN")

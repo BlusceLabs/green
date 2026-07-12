@@ -22,6 +22,10 @@ type TelegramTransport struct {
 	offset  int64
 	// PollTimeout is the getUpdates long-poll timeout (seconds).
 	PollTimeout int
+	// Access, when set, gates inbound messages by an admin/member allow-list
+	// with a pairing-code request flow (see telegram_access.go). Nil disables
+	// gating (any sender is handled).
+	Access *AccessStore
 }
 
 // NewTelegramTransport builds a Telegram transport for the given bot token.
@@ -77,9 +81,22 @@ func (t *TelegramTransport) Start(ctx context.Context, handler Handler) error {
 				ID:        fmt.Sprintf("%d", update.UpdateID),
 				Platform:  "telegram",
 				User:      update.Message.From.Username,
+				From:      fmt.Sprintf("%d", update.Message.From.ID),
 				ChatID:    fmt.Sprintf("%d", update.Message.Chat.ID),
 				Text:      update.Message.Text,
 				Timestamp: time.Now(),
+			}
+			// Access control: /start requests access; unapproved senders are held
+			// until an admin approves their pairing code. Approved senders fall
+			// through to the normal handler.
+			if t.Access != nil {
+				if gated, gateReply := t.gateMessage(msg); gated {
+					if strings.TrimSpace(gateReply) != "" {
+						_ = t.Send(ctx, Outbound{Platform: "telegram", ChatID: msg.ChatID, Text: gateReply})
+					}
+					t.offset = update.UpdateID + 1
+					continue
+				}
 			}
 			reply, herr := handler.Handle(ctx, msg)
 			if herr != nil {
@@ -161,10 +178,34 @@ type telegramUpdate struct {
 	Message  *struct {
 		Text string `json:"text"`
 		From struct {
+			ID       int64  `json:"id"`
 			Username string `json:"username"`
 		} `json:"from"`
 		Chat struct {
 			ID int64 `json:"id"`
 		} `json:"chat"`
 	} `json:"message"`
+}
+
+// gateMessage applies the access-control policy to an inbound message. It
+// returns (gated=true, reply) when the message should NOT reach the handler
+// (access request, pending, or unapproved), and (false, "") when the sender is
+// approved and the message proceeds to the handler.
+func (t *TelegramTransport) gateMessage(msg Message) (bool, string) {
+	userID := msg.From
+	username := msg.User
+	if strings.TrimSpace(msg.Text) == "/start" {
+		if t.Access.IsApproved(userID) {
+			return true, "You already have access to this bot."
+		}
+		code, _ := t.Access.RequestAccess(username, userID)
+		return true, fmt.Sprintf("Access requested. Share this code with an admin to be approved: %s", code)
+	}
+	if !t.Access.IsApproved(userID) {
+		if t.Access.IsPending(userID) {
+			return true, "Your access request is pending admin approval."
+		}
+		return true, "You don't have access yet. Send /start to request access."
+	}
+	return false, ""
 }

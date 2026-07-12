@@ -47,6 +47,7 @@ const (
 	commandExport
 	commandNew
 	commandSkills
+	commandBudget
 	commandLoop
 	commandVoice
 	commandSTTModel
@@ -155,6 +156,13 @@ var commandDefinitions = []commandDefinition{
 		group:       commandGroupTools,
 		description: "List installed skills; run one directly with /<skill-name> [args].",
 		kind:        commandSkills,
+	},
+	{
+		name:        "/budget",
+		usage:       "/budget [status|set <n>|reset|override [on|off]]",
+		group:       commandGroupRuntime,
+		description: "Show or change the daily token budget.",
+		kind:        commandBudget,
 	},
 	{
 		name:        "/context",

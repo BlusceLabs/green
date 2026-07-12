@@ -20,6 +20,7 @@ import (
 	"github.com/BlusceLabs/green/internal/providercatalog"
 	"github.com/BlusceLabs/green/internal/providermodeldiscovery"
 	"github.com/BlusceLabs/green/internal/providers"
+	"github.com/BlusceLabs/green/internal/remote"
 	"github.com/BlusceLabs/green/internal/sandbox"
 	"github.com/BlusceLabs/green/internal/sessions"
 	"github.com/BlusceLabs/green/internal/specmode"
@@ -136,6 +137,11 @@ type execOptions struct {
 	// additional write roots for this run. Unioned with
 	// config.SandboxConfig.AdditionalWriteRoots at scope construction time.
 	addDirs []string
+	// terminalEnv selects the remote terminal backend (Hermes' TERMINAL_ENV)
+	// for this run, overriding config. Empty means the local host. Accepted
+	// values mirror remote.BackendName: local, docker, ssh, singularity, modal,
+	// daytona.
+	terminalEnv string
 }
 
 type execUsageError struct {
@@ -265,6 +271,15 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 	if options.maxTurns > 0 {
 		overrides.MaxTurns = options.maxTurns
 	}
+	// --terminal-env / --backend selects the remote terminal backend for this
+	// run (Hermes' TERMINAL_ENV), overriding config. Empty keeps the local host.
+	if env := strings.TrimSpace(options.terminalEnv); env != "" {
+		if !remote.IsValidBackend(env) {
+			return writeExecFormatUsageError(stdout, stderr, options.outputFormat,
+				fmt.Sprintf("invalid --terminal-env %q: expected one of local, docker, ssh, singularity, modal, daytona", env))
+		}
+		overrides.Remote.Backend = env
+	}
 	resolved, err := deps.resolveConfig(workspaceRoot, overrides)
 	if err != nil {
 		if !options.listTools {
@@ -361,6 +376,17 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 	// ship nil-scope enforcement — add it below this re-registration instead.
 	for _, tool := range tools.CoreToolsScoped(workspaceRoot, execScope) {
 		registry.Register(tool)
+	}
+	// When a remote terminal backend is configured (Hermes' TERMINAL_ENV), swap
+	// the default local bash tool for one that routes commands to that backend.
+	// The sandbox permission gate still runs in the loop before execution, so
+	// only the execution surface changes.
+	if remoteEnv, err := remote.Open(remoteConfigFromResolved(resolved)); err != nil {
+		if strings.TrimSpace(resolved.Remote.Backend) != "" && resolved.Remote.Backend != string(remote.BackendLocal) {
+			return writeExecProviderError(stdout, stderr, options.outputFormat, "remote_error", err.Error())
+		}
+	} else if remoteEnv != nil && remoteEnv.Name() != remote.BackendLocal {
+		registry.Register(tools.NewScopedBashToolWithRemote(workspaceRoot, execScope, remoteEnv))
 	}
 	sandboxEngine, err := buildExecSandboxEngine(workspaceRoot, resolved, deps, execScope)
 	if err != nil {
@@ -634,6 +660,7 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 			}
 			sessionRecorder.append(sessions.EventToolResult, payload)
 		},
+		Budget:  loadBudgetTracker(),
 		OnUsage: func(u agent.Usage) {
 			writer.usage(u)
 			payload := usage.EventUsagePayload(u)
@@ -707,6 +734,23 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 	// including files created by shell commands that bypass the file tools (issue
 	// #551). Normal new deliverable files stay quiet to avoid warning fatigue.
 	emitScratchWarning()
+	// A run stopped by the daily token budget is reported (to stderr and to
+	// machine-readable consumers) before the final answer so the operator knows
+	// why it ended early. It is not treated as an error exit code — the run did
+	// produce a final answer.
+	if result.BudgetExceeded && result.Budget != nil {
+		budgetMsg := fmt.Sprintf("token budget exceeded for %s: used %d / limit %d. Raise it with `green budget set <n>` or allow this session with `green budget override on`.",
+			result.Budget.Date, result.Budget.Used, result.Budget.Limit)
+		sessionRecorder.append(sessions.EventError, map[string]any{"message": "budget exceeded"})
+		switch options.outputFormat {
+		case execOutputStreamJSON:
+			writer.errorEvent("budget_exceeded", budgetMsg, false)
+		case execOutputJSON:
+			_ = writeJSONLine(stdout, map[string]any{"type": "error", "code": "budget_exceeded", "message": budgetMsg})
+		default:
+			fmt.Fprintln(stderr, "[green] "+budgetMsg)
+		}
+	}
 	// A headless run the completion gate marked INCOMPLETE (no-tool-call stall,
 	// self-reported non-completion, or max-turns cutoff) must NOT be reported as a
 	// success: exit 4 AND a machine-readable terminal event saying so. Handled per
@@ -827,6 +871,27 @@ func registerToolSearchIfEligible(registry *tools.Registry, deferThreshold int, 
 		return
 	}
 	registry.Register(tools.NewToolSearchTool(registry))
+}
+
+// remoteConfigFromResolved maps the resolved RemoteConfig into the remote
+// package's Config (Hermes' TERMINAL_ENV). It is the single translation point
+// between green's config and the backend abstraction.
+func remoteConfigFromResolved(resolved config.ResolvedConfig) remote.Config {
+	r := resolved.Remote
+	return remote.Config{
+		Backend:          remote.BackendName(r.Backend),
+		DockerImage:      r.DockerImage,
+		DockerArgs:       r.DockerArgs,
+		SSHHost:          r.SSHHost,
+		SSHArgs:          r.SSHArgs,
+		SingularityImage: r.SingularityImage,
+		SingularityArgs:  r.SingularityArgs,
+		ModalApp:         r.ModalApp,
+		ModalArgs:        r.ModalArgs,
+		DaytonaTarget:    r.DaytonaTarget,
+		DaytonaArgs:      r.DaytonaArgs,
+		WorkspaceRoot:    r.WorkspaceRoot,
+	}
 }
 
 func buildExecSandboxEngine(workspaceRoot string, resolved config.ResolvedConfig, deps appDeps, scope *sandbox.Scope) (*sandbox.Engine, error) {

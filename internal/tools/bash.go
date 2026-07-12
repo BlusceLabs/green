@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 
 	greenSandbox "github.com/BlusceLabs/green/internal/sandbox"
 	"github.com/BlusceLabs/green/internal/secrets"
+	"github.com/BlusceLabs/green/internal/remote"
 )
 
 const defaultBashTimeoutMS = 120000
@@ -21,6 +23,10 @@ type bashTool struct {
 	baseTool
 	workspaceRoot string
 	scope         PathScope
+	// remoteEnv, when non-nil, routes command execution to a remote terminal
+	// backend (Hermes' TERMINAL_ENV) instead of the local host. It is set by
+	// NewScopedBashToolWithRemote and is nil for the default local bash tool.
+	remoteEnv remote.Environment
 }
 
 func NewBashTool(workspaceRoot string) Tool {
@@ -28,6 +34,18 @@ func NewBashTool(workspaceRoot string) Tool {
 }
 
 func NewScopedBashTool(workspaceRoot string, scope PathScope) Tool {
+	return newBashTool(workspaceRoot, scope, nil)
+}
+
+// NewScopedBashToolWithRemote builds a bash tool whose commands run on the given
+// remote environment (docker/ssh/singularity/modal/daytona). It mirrors Hermes'
+// BaseEnvironment wiring: the same tool surface, but every command is executed
+// on the selected backend.
+func NewScopedBashToolWithRemote(workspaceRoot string, scope PathScope, env remote.Environment) Tool {
+	return newBashTool(workspaceRoot, scope, env)
+}
+
+func newBashTool(workspaceRoot string, scope PathScope, env remote.Environment) Tool {
 	shellGuidance := shellGuidanceForGOOS(runtime.GOOS)
 	return bashTool{
 		baseTool: baseTool{
@@ -55,6 +73,7 @@ func NewScopedBashTool(workspaceRoot string, scope PathScope) Tool {
 		},
 		workspaceRoot: normalizeWorkspaceRoot(workspaceRoot),
 		scope:         scope,
+		remoteEnv:     env,
 	}
 }
 
@@ -126,6 +145,15 @@ func (tool bashTool) run(ctx context.Context, args map[string]any, engine *green
 	defer plan.Cleanup()
 	addSandboxMeta(meta, plan)
 
+	// Remote terminal backend (Hermes' TERMINAL_ENV): when the tool was built
+	// with a remote.Environment, route the command to that backend instead of
+	// the local host. The sandbox permission gate has already run in the loop
+	// before this tool executes, so authority checks are unchanged — only the
+	// execution surface differs.
+	if tool.remoteEnv != nil {
+		return tool.runRemote(commandCtx, commandText, absoluteCwd, plan, meta, timeoutMS)
+	}
+
 	// Bound the capture so a command with runaway output (`cat huge.log`, `yes`)
 	// can't grow green's memory before truncation: only the head+tail each stream
 	// will ever surface to the model are retained, the middle is discarded as it
@@ -180,6 +208,55 @@ func (tool bashTool) run(ctx context.Context, args map[string]any, engine *green
 	markLikelySandboxDenial(meta, plan, exitCode, stdoutText, stderrText)
 	outText, errText, truncated := budgetBashCapture(stdoutText, stdout.total, stderrText, stderrTotal, meta)
 	if meta[SandboxLikelyDeniedMeta] == "true" {
+		return Result{
+			Status:    StatusError,
+			Output:    formatBashOutputWithShellHint(outText, errText, exitCode, meta),
+			Truncated: truncated,
+			Meta:      meta,
+		}
+	}
+	return Result{
+		Status:    StatusOK,
+		Output:    formatBashOutput(outText, errText, exitCode),
+		Truncated: truncated,
+		Meta:      meta,
+	}
+}
+
+// runRemote executes commandText on the configured remote terminal backend and
+// formats the result through the same budget/redaction path as a local run. It
+// mirrors Hermes' BaseEnvironment.Run: a single chokepoint that captures
+// stdout/stderr and the exit code, with the remote backend translating cwd and
+// environment.
+func (tool bashTool) runRemote(ctx context.Context, commandText string, absoluteCwd string, plan greenSandbox.CommandPlan, meta map[string]string, timeoutMS int) Result {
+	meta["terminal_backend"] = string(tool.remoteEnv.Name())
+	env := os.Environ()
+	res, err := tool.remoteEnv.Run(ctx, commandText, absoluteCwd, env)
+	exitCode := res.ExitCode
+	if err != nil && exitCode == 0 {
+		exitCode = -1
+	}
+	meta["exit_code"] = strconv.Itoa(exitCode)
+	stdoutText := res.Stdout
+	stderrText := res.Stderr
+	stdoutTotal := len(stdoutText)
+	stderrTotal := len(stderrText)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return Result{
+			Status: StatusError,
+			Output: fmt.Sprintf("Error: Command timed out after %dms.", timeoutMS),
+			Meta:   meta,
+		}
+	}
+	if err != nil && exitCode < 0 {
+		return Result{
+			Status: StatusError,
+			Output: "Error executing remote command: " + err.Error(),
+			Meta:   meta,
+		}
+	}
+	outText, errText, truncated := budgetBashCapture(stdoutText, stdoutTotal, stderrText, stderrTotal, meta)
+	if exitCode != 0 {
 		return Result{
 			Status:    StatusError,
 			Output:    formatBashOutputWithShellHint(outText, errText, exitCode, meta),

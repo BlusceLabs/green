@@ -133,6 +133,19 @@ func Run(ctx context.Context, prompt string, provider Provider, options Options)
 	options.runPermissions = runPermissions
 	defer runPermissions.cleanup()
 
+	// Budget: record usage and (if a tracker is configured) enforce a daily cap.
+	// Wrap the caller's OnUsage so every token event also lands in the tracker.
+	onUsage := options.OnUsage
+	if options.Budget != nil {
+		wrapped := onUsage
+		onUsage = func(u Usage) {
+			options.Budget.Record(u)
+			if wrapped != nil {
+				wrapped(u)
+			}
+		}
+	}
+
 	messages := greenruntime.SeedMessagesWithImages(buildSystemPrompt(options), prompt, options.Images)
 
 	guards := newGuardState()
@@ -169,6 +182,16 @@ func Run(ctx context.Context, prompt string, provider Provider, options Options)
 	}()
 	for turn := 0; turn < maxTurns; turn++ {
 		result.Turns = turn + 1
+
+		// Daily token budget: stop issuing model calls once the cap is hit (unless
+		// the operator overrode it). We surface the budget state as the result so
+		// the surface can tell the user why the run ended early.
+		if options.Budget != nil && options.Budget.Exceeded() {
+			s := options.Budget.Status()
+			result.Budget = &s
+			result.BudgetExceeded = true
+			break
+		}
 
 		// Deliver background post-edit diagnostics from the previous turn's edits
 		// BEFORE compaction so the nudge is part of the request being budgeted.
@@ -255,7 +278,7 @@ func Run(ctx context.Context, prompt string, provider Provider, options Options)
 		// before the append), so the retry re-sends clean context with no
 		// conversation-state duplication.
 		forwardedVisibleText := false
-		forwardingOpts := greenruntime.CollectOptions{OnUsage: options.OnUsage}
+		forwardingOpts := greenruntime.CollectOptions{OnUsage: onUsage}
 		if options.OnText != nil {
 			forwardingOpts.OnText = func(s string) { forwardedVisibleText = true; options.OnText(s) }
 		}
@@ -299,7 +322,7 @@ func Run(ctx context.Context, prompt string, provider Provider, options Options)
 					return collected, retryStreamErr
 				}
 				collected = greenruntime.CollectStreamWithOptions(ctx, retryStream, greenruntime.CollectOptions{
-					OnUsage: options.OnUsage,
+					OnUsage: onUsage,
 				})
 			}
 			return collected, nil

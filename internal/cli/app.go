@@ -423,6 +423,12 @@ func runWithDeps(args []string, stdout io.Writer, stderr io.Writer, deps appDeps
 		return runMCP(args[1:], stdout, stderr, deps)
 	case "auth":
 		return runAuth(args[1:], stdout, stderr, deps)
+	case "budget":
+		return runBudget(args[1:], stdout, stderr)
+	case "kanban":
+		return runKanban(args[1:], stdout, stderr, deps)
+	case "telegram":
+		return runTelegram(args[1:], stdout, stderr)
 	case "sandbox":
 		return runSandbox(args[1:], stdout, stderr, deps)
 	case "update":
@@ -866,6 +872,7 @@ func runInteractiveTUIWithSetup(stderr io.Writer, deps appDeps, permissionMode a
 			DeferThreshold: resolved.Tools.DeferThreshold,
 			Specialists:    specialistRuntime.specialists,
 			Skills:         pluginActivation.skillInfos(deps.skillsDir()),
+			Budget:         loadBudgetTracker(),
 		},
 		// LoadSkills backs /skills and direct /<skill-name> invocation in the TUI.
 		// It resolves against the same merged set (default dir + plugin skill

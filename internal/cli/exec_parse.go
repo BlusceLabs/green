@@ -36,6 +36,25 @@ func parseExecArgs(args []string) (execOptions, bool, error) {
 			options.noCompletionGate = true
 		case arg == "--auto-reflect":
 			options.autoReflect = true
+		case arg == "--terminal-env" || arg == "--backend":
+			value, next, err := nextFlagValue(args, index, arg)
+			if err != nil {
+				return options, false, err
+			}
+			options.terminalEnv = strings.TrimSpace(value)
+			index = next
+		case strings.HasPrefix(arg, "--terminal-env="):
+			value, err := requiredInlineFlagValue(arg, "--terminal-env")
+			if err != nil {
+				return options, false, err
+			}
+			options.terminalEnv = value
+		case strings.HasPrefix(arg, "--backend="):
+			value, err := requiredInlineFlagValue(arg, "--backend")
+			if err != nil {
+				return options, false, err
+			}
+			options.terminalEnv = value
 		case arg == "--notify":
 			value, next, err := nextFlagValue(args, index, arg)
 			if err != nil {

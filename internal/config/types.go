@@ -90,6 +90,33 @@ type NotifyConfig struct {
 	FocusMode string `json:"focusMode,omitempty"`
 }
 
+// RemoteConfig selects and configures the terminal backend (Hermes'
+// TERMINAL_ENV equivalent). Empty/omitted means the local host. See
+// internal/remote for the backend semantics.
+type RemoteConfig struct {
+	// Backend is one of: "", "local", "docker", "ssh", "singularity",
+	// "modal", "daytona".
+	Backend string `json:"backend,omitempty"`
+	// DockerImage / DockerArgs configure the docker backend.
+	DockerImage string `json:"dockerImage,omitempty"`
+	DockerArgs  []string `json:"dockerArgs,omitempty"`
+	// SSHHost / SSHArgs configure the ssh backend (SSHHost is "user@host").
+	SSHHost string   `json:"sshHost,omitempty"`
+	SSHArgs []string `json:"sshArgs,omitempty"`
+	// SingularityImage / SingularityArgs configure the singularity backend.
+	SingularityImage string   `json:"singularityImage,omitempty"`
+	SingularityArgs  []string `json:"singularityArgs,omitempty"`
+	// ModalApp / ModalArgs configure the modal backend.
+	ModalApp string   `json:"modalApp,omitempty"`
+	ModalArgs []string `json:"modalArgs,omitempty"`
+	// DaytonaTarget / DaytonaArgs configure the daytona backend.
+	DaytonaTarget string   `json:"daytonaTarget,omitempty"`
+	DaytonaArgs   []string `json:"daytonaArgs,omitempty"`
+	// WorkspaceRoot is the path on the remote host corresponding to the local
+	// workspace root (used to translate cwd for ssh/daytona/modal).
+	WorkspaceRoot string `json:"workspaceRoot,omitempty"`
+}
+
 type ToolsConfig struct {
 	DeferThreshold    int `json:"deferThreshold,omitempty"`
 	deferThresholdSet bool
@@ -347,6 +374,7 @@ type FileConfig struct {
 	MaxTurns       int                `json:"maxTurns,omitempty"`
 	MCP            MCPConfig          `json:"mcp,omitempty"`
 	Sandbox        SandboxConfig      `json:"sandbox,omitempty"`
+	Remote         RemoteConfig       `json:"remote,omitempty"`
 	Notify         NotifyConfig       `json:"notify,omitempty"`
 	Tools          ToolsConfig        `json:"tools,omitempty"`
 	Swarm          SwarmConfig        `json:"swarm,omitempty"`
@@ -363,6 +391,7 @@ func (cfg FileConfig) MarshalJSON() ([]byte, error) {
 		MaxTurns       int                 `json:"maxTurns,omitempty"`
 		MCP            MCPConfig           `json:"mcp,omitempty"`
 		Sandbox        SandboxConfig       `json:"sandbox,omitempty"`
+		Remote         RemoteConfig        `json:"remote,omitempty"`
 		Notify         NotifyConfig        `json:"notify,omitempty"`
 		Tools          ToolsConfig         `json:"tools,omitempty"`
 		Swarm          SwarmConfig         `json:"swarm,omitempty"`
@@ -377,6 +406,7 @@ func (cfg FileConfig) MarshalJSON() ([]byte, error) {
 		MaxTurns:       cfg.MaxTurns,
 		MCP:            cfg.MCP,
 		Sandbox:        cfg.Sandbox,
+		Remote:         cfg.Remote,
 		Notify:         cfg.Notify,
 		Tools:          cfg.Tools,
 		Swarm:          cfg.Swarm,
@@ -412,6 +442,7 @@ type Overrides struct {
 	MaxTurns       int
 	MCP            MCPConfig
 	Sandbox        SandboxConfig
+	Remote         RemoteConfig
 	Notify         NotifyConfig
 	Tools          ToolsConfig
 	KeyBindings    KeyBindingsConfig
@@ -426,6 +457,7 @@ type ResolvedConfig struct {
 	MaxTurns       int
 	MCP            MCPConfig
 	Sandbox        SandboxConfig
+	Remote         RemoteConfig
 	Notify         NotifyConfig
 	Tools          ToolsConfig
 	Swarm          SwarmConfig

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"github.com/BlusceLabs/green/internal/budget"
 	"github.com/BlusceLabs/green/internal/hooks"
 	"github.com/BlusceLabs/green/internal/sandbox"
 	"github.com/BlusceLabs/green/internal/streamjson"
@@ -281,6 +282,10 @@ type Options struct {
 	OnAskUser           func(context.Context, AskUserRequest) (AskUserResponse, error)
 	OnToolResult        func(ToolResult)
 	OnUsage             func(Usage)
+	// Budget, when set, records token usage (via OnUsage) and enforces a daily
+	// token cap. When the cap is exceeded (and not overridden) the loop stops
+	// and reports the budget state instead of issuing more model calls.
+	Budget *budget.Tracker
 	// OnToolProgress, when set, is called with each stream-json event a
 	// specialist child process emits while running. The toolCallID identifies
 	// which Task tool call the progress belongs to. nil is a no-op.
@@ -354,6 +359,12 @@ type Result struct {
 	// marked Incomplete (e.g. "pending plan items remain"). Empty when Incomplete
 	// is false. Surfaced in logs / run_end so an abandoned run is debuggable.
 	IncompleteReason string
+	// Budget is the daily token-budget status captured when the run ended. Non-nil
+	// only when a Budget tracker was configured on Options.
+	Budget *budget.Status
+	// BudgetExceeded is true when the run stopped early because today's token
+	// spend crossed the configured daily cap (and no override was active).
+	BudgetExceeded bool
 }
 
 // Truncated reports whether the final response ended abnormally (cut off at the
