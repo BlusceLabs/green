@@ -1,6 +1,6 @@
 {
   "name": "@bluscelabs/green",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "green — a fast, multi-provider terminal coding agent.",
   "type": "module",
   "module": "bin/green.js",
