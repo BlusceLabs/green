@@ -56,3 +56,6 @@ green-termux-arm64
 # Built helper binaries at the repo root (not the cmd/ source dirs)
 /green-linux-sandbox
 /green-seccomp
+
+# mimocode cron lock
+.mimocode/

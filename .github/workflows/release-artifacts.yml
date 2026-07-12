@@ -47,7 +47,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # The token budget tracker persists under XDG_CONFIG_HOME/green keyed by
+      # date. Without isolation, a limit/usage written by a prior workflow run on
+      # the same (cached) runner leaks in and makes `go test ./...` fail with
+      # "token budget exceeded". Point XDG_CONFIG_HOME at a fresh temp dir so the
+      # budget tracker (and any other per-user config) starts clean every run.
       - name: Test
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/green-config
         run: go test ./...
 
       # green-release names assets green-v<package.json version>-… while the release
