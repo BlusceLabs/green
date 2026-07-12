@@ -82,3 +82,21 @@ func effectiveReasoningEfforts(model ModelEntry) []ReasoningEffort {
 	}
 	return reasoningEffortsForModelName(model.APIModel)
 }
+
+// NormalizeReasoningEffort maps a requested effort to the closest tier a provider
+// actually understands. Some providers cap out below "ultra" (e.g. Anthropic
+// exposes up to "max"), so an "ultra" request is demoted to "max" for those
+// providers — mirroring Hermes' adaptive effort map. Providers that do not
+// enumerate a cap (OpenAI-compatible, unknown) pass the value through unchanged.
+func NormalizeReasoningEffort(provider ProviderKind, effort ReasoningEffort) ReasoningEffort {
+	if effort != ReasoningEffortUltra {
+		return effort
+	}
+	switch provider {
+	case ProviderAnthropic, ProviderGoogle:
+		// These providers expose up to "max"; "ultra" is demoted.
+		return ReasoningEffortMax
+	default:
+		return effort
+	}
+}

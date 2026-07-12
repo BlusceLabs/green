@@ -88,8 +88,17 @@ func resolveExecPermissionMode(options execOptions) (agent.PermissionMode, error
 		mode = agent.PermissionModeMemberAuto
 	case "high":
 		mode = agent.PermissionModeUnsafe
+	case "smart":
+		// Hermes' "smart" approvals: low-risk, in-workspace actions auto-approve;
+		// destructive / network / out-of-workspace still prompt.
+		mode = agent.PermissionModeSmart
+	case "off":
+		// Hermes' "off" approvals: every non-hardline request auto-approves
+		// (equivalent to Unsafe for the auto-approve path, but named to match
+		// the Hermes approvals.mode vocabulary).
+		mode = agent.PermissionModeOff
 	default:
-		return "", execUsageError{fmt.Sprintf("Invalid autonomy level %q. Expected low, medium, or high.", options.autonomy)}
+		return "", execUsageError{fmt.Sprintf("Invalid autonomy level %q. Expected low, medium, high, smart, or off.", options.autonomy)}
 	}
 	if options.skipPermissionsUnsafe {
 		return agent.PermissionModeUnsafe, nil

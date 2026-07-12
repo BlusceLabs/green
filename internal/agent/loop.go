@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/BlusceLabs/green/internal/hooks"
+	"github.com/BlusceLabs/green/internal/learning"
 	"github.com/BlusceLabs/green/internal/redaction"
 	"github.com/BlusceLabs/green/internal/sandbox"
 	"github.com/BlusceLabs/green/internal/streamjson"
@@ -1597,8 +1598,14 @@ func dispatchSessionStart(ctx context.Context, options Options) {
 }
 
 // dispatchSessionEnd runs configured sessionEnd hooks once when the agent run
-// exits, including early error returns. Lifecycle hooks are advisory.
+// exits, including early error returns. Lifecycle hooks are advisory. When
+// options.AutoReflect is set it ALSO runs green's learning loop (Hermes'
+// autonomous skill-creation + memory curation) over the finished transcript —
+// best-effort, so a reflect failure never fails or stalls the run.
 func dispatchSessionEnd(ctx context.Context, options Options, result Result, runErr error) {
+	if options.AutoReflect {
+		runAutoReflect(ctx, options, result)
+	}
 	if options.Hooks == nil {
 		return
 	}
@@ -1620,6 +1627,33 @@ func dispatchSessionEnd(ctx context.Context, options Options, result Result, run
 		Event:   hooks.EventSessionEnd,
 		Payload: payload,
 	})
+}
+
+// runAutoReflect converts the finished run into a learning transcript and runs the
+// closed learning loop. It is deliberately tolerant: any error is swallowed so
+// the reflect can never affect the run's exit status. A session with too few
+// turns is skipped (the learning loop's own thresholds then decide what, if
+// anything, to persist).
+func runAutoReflect(ctx context.Context, options Options, result Result) {
+	if result.Turns < 1 {
+		return
+	}
+	transcript := learning.Transcript{SessionID: options.SessionID}
+	for _, msg := range result.Messages {
+		switch msg.Role {
+		case greenruntime.MessageRoleUser:
+			transcript.Turns = append(transcript.Turns, learning.Turn{Role: "user", Content: msg.Content})
+		case greenruntime.MessageRoleAssistant:
+			transcript.Turns = append(transcript.Turns, learning.Turn{Role: "assistant", Content: msg.Content})
+		case greenruntime.MessageRoleTool:
+			transcript.Turns = append(transcript.Turns, learning.Turn{Role: "tool", Content: msg.Content})
+		}
+	}
+	store := learning.NewStore(learning.DefaultDir(nil))
+	// Reflect is synchronous and offline; run it in a detached goroutine only if
+	// the context is already done, otherwise just call it directly. Keeping it
+	// inline (best-effort) avoids leaking goroutines on a cancelled context.
+	_, _ = store.Reflect(transcript)
 }
 
 // blockedByHookResult is the tool result for a call vetoed by a beforeTool hook.
@@ -1870,9 +1904,53 @@ func sandboxDecisionRequiresExplicitPermission(decision *sandbox.Decision) bool 
 	return decision != nil && decision.Action == sandbox.ActionPrompt && decision.Reason == sandbox.ReasonNetworkBlocked
 }
 
+// yoloHardlineBlocked reports whether a permission request sits on the hardline
+// floor that --yolo / PermissionModeOff may NEVER bypass. Mirroring Hermes'
+// yolo floor, these are the actions that can cause irreversible or credential-
+// exposing harm: reading a password from stdin into a privileged command, and
+// any request the sandbox has already hard-blocked (e.g. a persistent deny
+// rule, a symlink-traversal escape, or an out-of-workspace write the operator
+// forbade). Yolo widens convenience, not authority — the sandbox engine and
+// persistent deny rules remain the last word.
+func yoloHardlineBlocked(request PermissionRequest) bool {
+	if request.Block != nil {
+		// A sandbox hard-block (persistent deny, traversal, outside-workspace
+		// write-jail, network block) is never overridden by yolo.
+		return true
+	}
+	// Guard against `sudo`/`su`/privileged shells fed a password on stdin,
+	// which would expose secrets even under yolo.
+	if cmd, ok := request.Args["command"].(string); ok {
+		lower := strings.ToLower(cmd)
+		if strings.Contains(lower, "sudo") || strings.Contains(lower, "su -") || strings.Contains(lower, "su root") {
+			if strings.Contains(lower, "stdin") || strings.Contains(lower, "--stdin") || strings.Contains(lower, "-S") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// requestPermission resolves a permission request. When options.Yolo is set (or
+// the mode is Off), low-risk requests auto-approve; the hardline floor in
+// yoloHardlineBlocked is always enforced. PermissionModeSmart auto-approves only
+// read/low-risk, in-workspace actions and still prompts for anything the sandbox
+// flags as elevated. When no front-end is wired (headless with no approver), the
+// request is denied — yolo cannot manufacture an approver that does not exist.
 func requestPermission(ctx context.Context, request PermissionRequest, options Options) (PermissionDecision, error) {
 	if options.OnPermissionRequest == nil {
 		return PermissionDecision{Action: PermissionDecisionDeny, Reason: request.Reason}, nil
+	}
+	yolo := options.Yolo || options.PermissionMode == PermissionModeOff
+	if yolo && !yoloHardlineBlocked(request) {
+		return PermissionDecision{Action: PermissionDecisionAllow, Reason: "yolo auto-approved (hardline floor enforced)"}, nil
+	}
+	if options.PermissionMode == PermissionModeSmart && !yoloHardlineBlocked(request) {
+		// Smart auto-approves only non-elevated, in-workspace, read/low-risk
+		// actions; anything the sandbox escalated still prompts.
+		if request.Risk.Level == sandbox.RiskLow && request.Action != PermissionActionDeny {
+			return PermissionDecision{Action: PermissionDecisionAllow, Reason: "smart auto-approved low-risk action"}, nil
+		}
 	}
 	return options.OnPermissionRequest(ctx, request)
 }

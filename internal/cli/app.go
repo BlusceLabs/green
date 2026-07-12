@@ -17,6 +17,8 @@ import (
 
 	"github.com/BlusceLabs/green/internal/agent"
 	"github.com/BlusceLabs/green/internal/config"
+	"github.com/BlusceLabs/green/internal/greengit"
+	"github.com/BlusceLabs/green/internal/greenruntime"
 	"github.com/BlusceLabs/green/internal/hooks"
 	"github.com/BlusceLabs/green/internal/localcontrol"
 	"github.com/BlusceLabs/green/internal/mcp"
@@ -40,8 +42,6 @@ import (
 	"github.com/BlusceLabs/green/internal/update"
 	"github.com/BlusceLabs/green/internal/verify"
 	"github.com/BlusceLabs/green/internal/worktrees"
-	"github.com/BlusceLabs/green/internal/greengit"
-	"github.com/BlusceLabs/green/internal/greenruntime"
 )
 
 var version = "dev"
@@ -138,6 +138,16 @@ func defaultAppDeps() appDeps {
 			return config.ResolveMCP(options)
 		},
 		newProvider: func(profile config.ProviderProfile) (greenruntime.Provider, error) {
+			// GitHub Copilot consumes a GitHub OAuth login, exchanged at request
+			// time for a Copilot token — handled by a dedicated resolver.
+			if strings.EqualFold(strings.TrimSpace(profile.CatalogID), "github-copilot") {
+				resolver, loginKey := githubCopilotResolver()
+				return providers.New(profile, providers.Options{
+					UserAgent:     userAgent(),
+					OAuthResolver: resolver,
+					OAuthLoginKey: loginKey,
+				})
+			}
 			// Resolve the OAuth login ONCE: the bearer resolver and the login key it
 			// bound must describe the same login (the key is passed on to the Codex
 			// account-header resolver so it never re-selects independently).
@@ -375,6 +385,18 @@ func runWithDeps(args []string, stdout io.Writer, stderr io.Writer, deps appDeps
 		return runSetup(args[1:], stdout, stderr, deps)
 	case "context":
 		return runContext(args[1:], stdout, stderr, deps)
+	case "contextfile":
+		return runContextFile(args[1:], stdout, stderr, deps)
+	case "learn":
+		return runLearn(args[1:], stdout, stderr, deps)
+	case "trajectory":
+		return runTrajectory(args[1:], stdout, stderr, deps)
+	case "recall":
+		return runRecall(args[1:], stdout, stderr, deps)
+	case "gateway":
+		return runGateway(args[1:], stdout, stderr, deps)
+	case "lsp":
+		return runLSP(args[1:], stdout, stderr, deps)
 	case "repo-map", "repomap":
 		return runRepoMap(args[1:], stdout, stderr, deps)
 	case "search", "find":

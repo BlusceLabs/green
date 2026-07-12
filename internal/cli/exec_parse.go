@@ -22,6 +22,8 @@ func parseExecArgs(args []string) (execOptions, bool, error) {
 			return options, true, nil
 		case arg == "--skip-permissions-unsafe":
 			options.skipPermissionsUnsafe = true
+		case arg == "--yolo":
+			options.yolo = true
 		case arg == "--list-tools":
 			options.listTools = true
 		case arg == "--allow-escalation":
@@ -32,6 +34,8 @@ func parseExecArgs(args []string) (execOptions, bool, error) {
 			options.noNotify = true
 		case arg == "--no-completion-gate":
 			options.noCompletionGate = true
+		case arg == "--auto-reflect":
+			options.autoReflect = true
 		case arg == "--notify":
 			value, next, err := nextFlagValue(args, index, arg)
 			if err != nil {

@@ -96,9 +96,45 @@ Pick **Sign in with OAuth** → the list of providers that do real OAuth → cho
   authorization server), the Codex backend will 401 and `green auth status chatgpt`
   will show the warning. Like xAI, the preset uses the publicly-shipped Codex CLI
   client identity (`app_EMoamEEZ73f0CkXaXp7hrann`) and is opt-in via
-  `green_OAUTH_ALLOW_PRESETS=1`. As of mid-2026 the Codex backend is
+  `green_OAUTH_ALLOW_PRESETS=1`.   As of mid-2026 the Codex backend is
   Cloudflare-gated: requests from a non-Codex client can still be challenged, and
   the `chatgpt-proxy` route in §2 is the conservative fallback.
+- **GitHub Copilot — device-flow preset** — `green auth github` runs a GitHub
+  device-code OAuth login (you approve on github.com). At request time, the
+  **github-copilot** provider (a manual OpenAI-compatible profile, configured
+  below) exchanges that GitHub token for a Copilot access token and calls the
+  OpenAI-compatible `api.githubcopilot.com` endpoint, so your Copilot subscription
+  serves the model. The GitHub OAuth client identity is operator-controlled: set
+  `green_OAUTH_GITHUB_CLIENT_ID` to your own OAuth app's client_id (GitHub's device
+  flow needs a registered app at https://github.com/settings/developers — no client
+  secret required). Then add a manual provider profile:
+
+  ```jsonc
+  // ~/.config/green/config.json (or ./.green/config.json)
+  {
+    "activeProvider": "copilot",
+    "providers": [
+      {
+        "name": "copilot",
+        "catalogID": "github-copilot",        // triggers the GitHub→Copilot token exchange
+        "baseURL": "https://api.githubcopilot.com/v1",
+        "model": "gpt-4o",
+        "requiresAuth": true
+      }
+    ]
+  }
+  ```
+
+  ```sh
+  green auth github          # one-time device-code login to github.com
+  green exec --prompt "say hi"   # routes through your Copilot subscription
+  ```
+
+  The github-copilot profile is intentionally *not* in the built-in provider
+  catalog (it has no API-key env var and no in-app OAuth login flow of its own —
+  its auth comes from the separate `github` login), so it is added by hand as
+  above. The resolver keys off `catalogID: "github-copilot"` and the stored
+  `github` login.
 - **Hugging Face — opt-in preset, BYO client_id** — `green auth login huggingface`
   (or `--device` for headless) opens a Hugging Face OAuth flow. The bearer works on
   the OpenAI-compatible router at `https://router.huggingface.co/v1` for hundreds

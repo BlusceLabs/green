@@ -99,6 +99,21 @@ var builtinOAuthPresets = map[string]providerPreset{
 		Scopes:                []string{"openid", "profile", "email", "offline_access", "api.connectors.read", "api.connectors.invoke"},
 		Flow:                  FlowLoopback,
 	},
+	// GitHub (device flow). The token from this login is the authority the
+	// "github-copilot" provider exchanges for a Copilot access token (see
+	// internal/cli/oauth_provider.go). No client_id is baked in: supply your own
+	// OAuth app's client_id via green_OAUTH_GITHUB_CLIENT_ID (GitHub's device
+	// authorization endpoint needs a registered OAuth app; create one at
+	// https://github.com/settings/developers — no client secret required for the
+	// device flow). Env wins over this preset, so the operator always controls
+	// the OAuth client identity.
+	"github": {
+		DeviceAuthorizationEndpoint: "https://github.com/login/device/code",
+		TokenEndpoint:               "https://github.com/login/oauth/access_token",
+		IssuerURL:                   "https://github.com",
+		Scopes:                      []string{"read:user"},
+		Flow:                        FlowDevice,
+	},
 }
 
 // lookupOAuthPreset returns the baked-in preset for a provider name (if any).

@@ -281,6 +281,12 @@ green verify           detect and run local verification checks
 green changes          inspect and commit local git changes
 green usage            token usage and estimated cost
 green cron             scheduled agent jobs
+green learn            self-improving learning loop: memory, profile, reflect, nudge, skills
+green contextfile      durable project/user context files (Hermes-style)
+green trajectory       capture a session for training & eval, with compression
+green gateway          reach the agent from chat platforms (local, Telegram, Discord, Slack, WhatsApp via whatsmeow, Email/IMAP+SMTP, Signal)
+green recall           search past sessions and synthesize (Hermes recall)
+green lsp              Language Server Protocol from the CLI (diagnostics, goto, find)
 green update           check for newer releases
 ```
 

@@ -78,6 +78,10 @@ func runAuth(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 		return runAuthOpenRouter(args[1:], stdout, stderr, deps)
 	case "chatgpt":
 		return runAuthChatGPT(args[1:], stdout, stderr, deps)
+	case "github":
+		// GitHub device-flow OAuth login; the "github-copilot" provider exchanges
+		// the resulting token for a Copilot access token at request time.
+		return runAuthLogin([]string{"github", "--device"}, stdout, stderr, deps)
 	default:
 		return writeExecUsageError(stderr, fmt.Sprintf("unknown auth subcommand %q", args[0]))
 	}
@@ -591,6 +595,7 @@ Commands:
   refresh <provider> [--watch]                    Force a token refresh (--watch keeps it fresh)
   openrouter                                      Log in to OpenRouter in the browser; mints an API key
   chatgpt                                         Log in to ChatGPT in the browser (Codex backend, ChatGPT Plus/Pro)
+  github                                          Log in to GitHub (device flow); enables the github-copilot provider
 
 A provider is any OAuth 2.0 / OIDC server. "openrouter" ('green auth openrouter')
 works out of the box. "xai" ('green auth login xai') uses a built-in preset that is

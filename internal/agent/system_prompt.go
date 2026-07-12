@@ -10,6 +10,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/BlusceLabs/green/internal/config"
+	"github.com/BlusceLabs/green/internal/contextfiles"
+	"github.com/BlusceLabs/green/internal/learning"
 	"github.com/BlusceLabs/green/internal/repomap"
 	"github.com/BlusceLabs/green/internal/workspaceseed"
 )
@@ -109,6 +111,13 @@ func buildSystemPrompt(options Options) string {
 	if style := responseStyleContext(options); style != "" {
 		sections = append(sections, style)
 	}
+	// Persistent memory, the user profile, and evolving context files come from
+	// the learning loop (Hermes-style self-improvement). They are appended late
+	// so they sit just above the safety policy — durable, specific guidance the
+	// agent should honor unless the user revises it this session.
+	if learned := learningContext(options); learned != "" {
+		sections = append(sections, learned)
+	}
 	if policy := strings.TrimSpace(confirmationPolicy); policy != "" {
 		sections = append(sections, policy)
 	}
@@ -130,6 +139,39 @@ func responseStyleContext(options Options) string {
 	default:
 		return ""
 	}
+}
+
+// learningContext builds the "what the agent already knows about you and this
+// project" section from three sources: the learning loop's persistent memory and
+// user profile, and Hermes-style context files (project CONTEXT.md + the user's
+// context.md). All three are read-only here; they are written by `green learn`
+// and `green contextfile`. A missing learning dir or empty state yields "".
+func learningContext(options Options) string {
+	root := learning.DefaultDir(nil)
+	store := learning.NewStore(root)
+
+	var blocks []string
+	if mem, err := store.RenderMemoryBlock(); err == nil && mem != "" {
+		blocks = append(blocks, mem)
+	}
+	if prof, err := store.RenderProfileBlock(); err == nil && prof != "" {
+		blocks = append(blocks, prof)
+	}
+
+	// Context files: project scope keyed off the run cwd, user scope off the
+	// user config dir. Both are best-effort; errors are swallowed so a missing
+	// file never breaks prompt construction.
+	userDir, _ := config.UserConfigDir()
+	if files, err := contextfiles.Load(options.Cwd, userDir); err == nil {
+		if block := contextfiles.RenderBlock(files); block != "" {
+			blocks = append(blocks, block)
+		}
+	}
+
+	if len(blocks) == 0 {
+		return ""
+	}
+	return strings.Join(blocks, "\n\n")
 }
 
 func approvedCommandPrefixContext(options Options) string {

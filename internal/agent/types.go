@@ -33,6 +33,16 @@ const (
 	// everywhere except ToolAdvertised, so authority is never widened beyond what an
 	// interactive auto agent already has inside the sandbox.
 	PermissionModeMemberAuto PermissionMode = "member-auto"
+	// PermissionModeSmart is Hermes' "smart" approvals: low-risk, in-workspace
+	// commands auto-approve, while anything destructive, network-egressing, or
+	// out-of-workspace still prompts. It is a stricter, safer cousin of Unsafe
+	// that never silently approves a high-risk action.
+	PermissionModeSmart PermissionMode = "smart"
+	// PermissionModeOff is Hermes' "off" approvals: every permission request is
+	// auto-approved (the yolo floor in requestPermission still enforces the
+	// hardline set that no mode may bypass). Equivalent to Unsafe for the
+	// auto-approve path but named to match the Hermes approvals.mode vocabulary.
+	PermissionModeOff PermissionMode = "off"
 )
 
 type StopReason string
@@ -237,6 +247,13 @@ type Options struct {
 	CompactionPreserveLast int
 	Registry               *tools.Registry
 	PermissionMode         PermissionMode
+	// Yolo, when true, auto-approves permission requests that are not on the
+	// hardline floor (see yoloHardlineBlocked). It mirrors Hermes' --yolo /
+	// HERMES_YOLO_MODE=1: a per-session switch that cannot be turned ON by the
+	// model mid-run (the field is set once at session start and never read from
+	// tool output), so a prompt-injection can ask for approvals but cannot widen
+	// authority beyond what the operator opted into at launch.
+	Yolo bool
 	Autonomy               string
 	Sandbox                *sandbox.Engine
 	// FileTracker records per-session file read/write versions so the write tools
@@ -304,6 +321,14 @@ type Options struct {
 	// finalizes as INCOMPLETE (Result.Incomplete) rather than success. Default
 	// false leaves the loop byte-identical, so the interactive TUI is unaffected.
 	RequireCompletionSignal bool
+
+	// AutoReflect, when true, runs green's learning loop (Hermes' autonomous
+	// skill-creation + memory curation) at session end: after a substantial task
+	// the agent mints a reusable skill from the transcript and curates memory. It
+	// is OFF by default so a plain run is byte-identical; `green learn
+	// enable-autoreflect` (or the exec flag) turns it on. The reflect is
+	// best-effort: any error is swallowed so it can never fail or stall a run.
+	AutoReflect bool
 
 	runPermissions *permissionRunState
 }

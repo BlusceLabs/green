@@ -94,6 +94,13 @@ type execOptions struct {
 	worktreeName          string
 	worktreeDir           string
 	skipPermissionsUnsafe bool
+	// yolo opts the run into Hermes-style auto-approval: every permission
+	// request that is not on the hardline floor (sudo-stdin, sandbox hard-blocks,
+	// persistent deny rules) is auto-approved. It is FROZEN at parse time — the
+	// value is read once here and never mutated from tool output — so a
+	// prompt-injection cannot widen authority mid-run. The HERMES_YOLO_MODE=1
+	// env var sets the same switch; --yolo on the CLI overrides it.
+	yolo bool
 	// allowEscalation opts the run into mid-run model escalation: it registers
 	// the escalate_model tool and wires agent.Options.ModelSwitcher. Off by
 	// default — a run without the flag is byte-identical to before (no tool, nil
@@ -120,6 +127,11 @@ type execOptions struct {
 	// mislabel honest blocker reports. Default off: plain `green exec` keeps the
 	// gate, preserving CI/cron semantics.
 	noCompletionGate bool
+	// autoReflect opts the run into green's learning loop at session end
+	// (Hermes' autonomous skill-creation + memory curation): after a substantial
+	// task the agent mints a reusable skill from the transcript. Off by default;
+	// `green learn enable-autoreflect` flips the persistent default on.
+	autoReflect bool
 	// addDirs holds directories passed via --add-dir that should be allowed as
 	// additional write roots for this run. Unioned with
 	// config.SandboxConfig.AdditionalWriteRoots at scope construction time.
@@ -560,6 +572,10 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 		Images:           images,
 		Registry:         registry,
 		PermissionMode:   permissionMode,
+		// Yolo is frozen here at run start: the flag (or HERMES_YOLO_MODE=1)
+		// sets it once and the agent loop never reads it back from tool output,
+		// so a prompt-injection cannot widen authority mid-run.
+		Yolo:             options.yolo || strings.TrimSpace(os.Getenv("HERMES_YOLO_MODE")) == "1",
 		Autonomy:         options.autonomy,
 		SelfCorrect:      selfCorrector,
 		FileDiagnostics:  fileDiagnostics,
@@ -570,6 +586,12 @@ func runExec(args []string, stdout io.Writer, stderr io.Writer, deps appDeps) in
 		// --no-completion-gate lets conversational exec callers (a chat frontend
 		// with an operator present) opt out the same way.
 		RequireCompletionSignal: !options.noCompletionGate,
+		// AutoReflect runs the learning loop at session end (Hermes' autonomous
+		// skill creation). The --auto-reflect flag opts this run in. The
+		// persistent default is handled separately by `green learn
+		// enable-autoreflect`, which installs a sessionEnd hook — so we do not
+		// double-reflect here.
+		AutoReflect: options.autoReflect,
 		Sandbox:                 sandboxEngine,
 		FileTracker:             fileTracker,
 		Hooks:                   hookDispatcher,
@@ -1148,7 +1170,7 @@ func forwardedReasoningEffort(registry modelregistry.Registry, modelID string, r
 	if effective == modelregistry.ReasoningEffortNone {
 		return ""
 	}
-	return string(effective)
+	return string(modelregistry.NormalizeReasoningEffort(entry.Provider, effective))
 }
 
 // reasoningEffortNotice resolves the requested --reasoning-effort against the

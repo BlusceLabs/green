@@ -29,7 +29,25 @@ const (
 	// newer Anthropic models). Defined so a capability catalog that lists "max"
 	// has a constant to map to; no curated model lists it yet.
 	ReasoningEffortMax ReasoningEffort = "max"
+	// ReasoningEffortUltra is the highest tier, above max. Hermes exposes
+	// "ultra" as the ceiling for models that support extended reasoning. When a
+	// provider does not understand "ultra" it is normalized down by the
+	// capability resolver (see normalizeReasoningEffort).
+	ReasoningEffortUltra ReasoningEffort = "ultra"
 )
+
+// AllReasoningEfforts is the ordered set of effort tiers from least to most
+// reasoning, used by help text and completion suggestions.
+var AllReasoningEfforts = []ReasoningEffort{
+	ReasoningEffortNone,
+	ReasoningEffortMinimal,
+	ReasoningEffortLow,
+	ReasoningEffortMedium,
+	ReasoningEffortHigh,
+	ReasoningEffortXHigh,
+	ReasoningEffortMax,
+	ReasoningEffortUltra,
+}
 
 type ModelCapability string
 
@@ -410,7 +428,7 @@ func ValidRuntimeProviderKind(provider ProviderKind) bool {
 
 func ValidReasoningEffort(effort ReasoningEffort) bool {
 	switch effort {
-	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh, ReasoningEffortMax:
+	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh, ReasoningEffortMax, ReasoningEffortUltra:
 		return true
 	default:
 		return false
