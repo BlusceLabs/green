@@ -377,22 +377,27 @@ func modelsFromCatalog(models []providermodelcatalog.Model) []Model {
 }
 
 func mergeLiveModels(provider providercatalog.Descriptor, liveModels []Model, catalogModels []Model) []Model {
-	byID := map[string]Model{}
-	for _, model := range catalogModels {
-		byID[model.ID] = model
+	liveByID := make(map[string]Model, len(liveModels))
+	for _, model := range liveModels {
+		liveByID[model.ID] = model
 	}
-	hasCatalog := len(byID) > 0
-	result := make([]Model, 0, len(liveModels))
-	for _, live := range liveModels {
-		if catalog, ok := byID[live.ID]; ok {
-			if !providermodelcatalog.IsCodingModel(catalogModelFromDiscovery(catalog)) {
-				continue
-			}
+	result := make([]Model, 0, len(liveModels)+len(catalogModels))
+	seen := make(map[string]bool, len(catalogModels))
+	// Catalog models (rich metadata) come first. When a model is also reported
+	// live, mark its source as live too. Every catalog model is kept — including
+	// ones the live /v1/models probe doesn't return — so the picker shows the
+	// full provider catalog, not just the live intersection.
+	for _, catalog := range catalogModels {
+		if _, ok := liveByID[catalog.ID]; ok {
 			catalog.Source = firstDiscoverySource(catalog.Source, "live")
-			result = append(result, catalog)
-			continue
 		}
-		if hasCatalog {
+		result = append(result, catalog)
+		seen[catalog.ID] = true
+	}
+	// Append live-only models (real running models absent from the catalog),
+	// subject to the provider's allow/non-coding gate.
+	for _, live := range liveModels {
+		if seen[live.ID] {
 			continue
 		}
 		if !liveModelAllowedWithoutCatalog(provider, live.ID) {

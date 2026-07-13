@@ -247,8 +247,8 @@ func TestDiscoverCatalogMergesLiveModelsWithModelsDevMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DiscoverCatalog returned error: %v", err)
 	}
-	if got := strings.Join(modelIDs(models), ","); got != "gpt-4.1" {
-		t.Fatalf("models = %s, want live coding model IDs only", got)
+	if got := strings.Join(modelIDs(models), ","); got != "gpt-4.1,not-enabled" {
+		t.Fatalf("models = %s, want merged catalog models (gpt-4.1 + catalog-only not-enabled); live-only non-coding models stay gated", got)
 	}
 	for _, model := range models {
 		if model.ID == "gpt-4.1" {

@@ -45,10 +45,9 @@ func (e *setupFixableError) Unwrap() []error { return []error{e.err, e.sentinel}
 // later steps); 50 matches the old "deep" preset. Raise per-session with /turns.
 const defaultMaxTurns = 50
 
-// MaxTurnsCeiling caps the per-run tool-turn budget so a stray env value or typo
-// can't set an absurd ceiling. Shared between applyEnv (read site) and the /turns
-// command (write site) so the bound holds even if the env is set by a raw shell.
-const MaxTurnsCeiling = 500
+// MaxTurnsCeiling caps the per-run tool-turn budget. Set very high to allow
+// unlimited agentic work without hitting turn limits.
+const MaxTurnsCeiling = 999999
 
 // defaultDeferThreshold is the number of deferred-eligible (MCP) tools at which
 // green collapses their full JSON schemas into compact `tool_search` reminder

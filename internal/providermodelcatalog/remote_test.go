@@ -46,10 +46,16 @@ func TestParseModelsDevProviderScopesAndMapsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseModelsDevProvider returned error: %v", err)
 	}
-	if got := strings.Join(modelIDs(models), ","); got != "gpt-4.1" {
-		t.Fatalf("models = %#v, want only coding-capable OpenAI model", got)
+	if got := strings.Join(modelIDs(models), ","); got != "text-embedding-3-large,gpt-image-1,gpt-4.1,whisper-1" {
+		t.Fatalf("models = %#v, want every OpenAI model (coding and non-coding)", got)
 	}
-	model := models[0]
+	var model Model
+	for _, m := range models {
+		if m.ID == "gpt-4.1" {
+			model = m
+			break
+		}
+	}
 	if model.ID != "gpt-4.1" || model.Description != "GPT-4.1" {
 		t.Fatalf("model identity = %#v, want GPT-4.1 metadata", model)
 	}
@@ -100,8 +106,8 @@ func TestParseOpenGatewayCatalogSupportsRichModelJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseOpenGatewayCatalog returned error: %v", err)
 	}
-	if got := strings.Join(modelIDs(models), ","); got != "minimax-m3,tencent/hy3" {
-		t.Fatalf("models = %#v, want gateway coding models", got)
+	if got := strings.Join(modelIDs(models), ","); got != "minimax-m3,tencent/hy3,image-route" {
+		t.Fatalf("models = %#v, want every gateway model (coding and non-coding)", got)
 	}
 	model := models[0]
 	if model.ID != "minimax-m3" || model.Description != "agentic coding route" {
@@ -128,7 +134,8 @@ func TestModelsDevProviderIDMapsgreenAliases(t *testing.T) {
 		"nvidia-nim":   "nvidia",
 		"xiaomi-mimo":  "xiaomi",
 		"dashscope":    "alibaba",
-		"ollama-cloud": "ollama-cloud",
+		"ollama":       "ollama",
+		"ollama-cloud": "ollama",
 		"zai-cn":       "zai",
 		"minimaxi-cn":  "minimax",
 	}

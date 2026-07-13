@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BlusceLabs/green/internal/providercatalog"
@@ -43,15 +44,59 @@ func FetchRemote(ctx context.Context, provider providercatalog.Descriptor, optio
 }
 
 func FetchModelsDev(ctx context.Context, providerID string, options FetchOptions) ([]Model, error) {
-	endpoint := strings.TrimSpace(options.ModelsDevURL)
-	if endpoint == "" {
-		endpoint = DefaultModelsDevURL
-	}
-	body, err := fetchJSON(ctx, endpoint, options.HTTPClient)
+	doc, err := loadModelsDevDoc(options)
 	if err != nil {
 		return nil, err
 	}
-	return ParseModelsDevProvider(body, providerID)
+	providerID = strings.TrimSpace(providerID)
+	providerModels, ok := doc[providerID]
+	if !ok {
+		return nil, fmt.Errorf("models.dev provider %q not found", providerID)
+	}
+	return modelsDevProviderToModels(providerID, providerModels)
+}
+
+// modelsDevDocMemo caches the parsed models.dev api.json keyed by the URL it was
+// fetched from, so the picker can enumerate many providers without re-downloading
+// the (large) document on every provider switch. Entries are cached on success
+// only — a failed fetch is retried on the next call, so a transient network error
+// does not permanently poison the cache for the process.
+var (
+	modelsDevDocMu    sync.Mutex
+	modelsDevDocCache = map[string]modelsDevDocEntry{}
+)
+
+type modelsDevDocEntry struct {
+	doc map[string]map[string]remoteModel
+	err error
+}
+
+func loadModelsDevDoc(options FetchOptions) (map[string]map[string]remoteModel, error) {
+	url := strings.TrimSpace(options.ModelsDevURL)
+	if url == "" {
+		url = DefaultModelsDevURL
+	}
+	modelsDevDocMu.Lock()
+	defer modelsDevDocMu.Unlock()
+	if entry, ok := modelsDevDocCache[url]; ok {
+		return entry.doc, entry.err
+	}
+	body, err := fetchJSON(context.Background(), url, options.HTTPClient)
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]struct {
+		Models map[string]remoteModel `json:"models"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("decode models.dev catalog: %w", err)
+	}
+	doc := make(map[string]map[string]remoteModel, len(payload))
+	for id, provider := range payload {
+		doc[id] = provider.Models
+	}
+	modelsDevDocCache[url] = modelsDevDocEntry{doc: doc}
+	return doc, nil
 }
 
 func FetchOpenGateway(ctx context.Context, endpoint string, options FetchOptions) ([]Model, error) {
@@ -74,19 +119,27 @@ func ParseModelsDevProvider(body []byte, providerID string) ([]Model, error) {
 	if !ok {
 		return nil, fmt.Errorf("models.dev provider %q not found", providerID)
 	}
-	models := make([]Model, 0, len(provider.Models))
-	for key, item := range provider.Models {
+	return modelsDevProviderToModels(providerID, provider.Models)
+}
+
+// modelsDevProviderToModels converts a provider's models.dev model map into the
+// shared Model shape. It intentionally does NOT filter by IsCodingModel: the
+// picker surfaces the full provider catalog (coding and non-coding) so users can
+// see every model. Callers that need coding-only lists apply their own filter.
+func modelsDevProviderToModels(providerID string, models map[string]remoteModel) ([]Model, error) {
+	out := make([]Model, 0, len(models))
+	for key, item := range models {
 		model := item.toModel(key, modelsDevSource)
-		if model.ID == "" || !IsCodingModel(model) {
+		if model.ID == "" {
 			continue
 		}
-		models = append(models, model)
+		out = append(out, model)
 	}
-	sortModels(models)
-	if len(models) == 0 {
+	sortModels(out)
+	if len(out) == 0 {
 		return nil, fmt.Errorf("models.dev provider %q returned no models", providerID)
 	}
-	return models, nil
+	return out, nil
 }
 
 func ParseOpenGatewayCatalog(body []byte) ([]Model, error) {
@@ -104,7 +157,7 @@ func ParseOpenGatewayCatalog(body []byte) ([]Model, error) {
 	models := make([]Model, 0, len(items))
 	for _, item := range items {
 		model := item.toModel("", openGatewaySource)
-		if model.ID == "" || !IsCodingModel(model) {
+		if model.ID == "" {
 			continue
 		}
 		models = append(models, model)
@@ -132,6 +185,10 @@ func ModelsDevProviderID(provider providercatalog.Descriptor) string {
 		return "zai"
 	case "minimaxi-cn":
 		return "minimax"
+	// Ollama Cloud is served from the same models.dev "ollama" catalog as the
+	// local Ollama provider, so both resolve there to surface its model list.
+	case "ollama", "ollama-cloud":
+		return "ollama"
 	default:
 		return strings.TrimSpace(provider.ID)
 	}
