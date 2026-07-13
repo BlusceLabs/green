@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once the first release is
 tagged. Until then, source builds report the version `dev`.
 
+## [0.4.0](https://github.com/BlusceLabs/green/compare/v0.3.1...v0.4.0) (2026-07-13)
+
+
+### Features
+
+* Hermes features, remote terminal backends, budget/kanban/telegram ([8b8dc8f](https://github.com/BlusceLabs/green/commit/8b8dc8f23022e47d2656fbb6a470e3542edb7c06))
+* port Hermes learning/gateway loop and opencode LSP/Copilot features ([d340262](https://github.com/BlusceLabs/green/commit/d340262a2e4df0bc837fb22e439a6e8dbcb6d728))
+* surface full models.dev catalogs in picker; lift tool-turn ceiling ([688d192](https://github.com/BlusceLabs/green/commit/688d1927a76a7f36f264430c94a15d7349eab4bc))
+* **tui:** live generation throughput indicator ([d5ba754](https://github.com/BlusceLabs/green/commit/d5ba754d046deda9e9fa9a167835074fd517ab18))
+
 ## [0.3.1](https://github.com/BlusceLabs/green/compare/v0.3.0...v0.3.1) (2026-07-11)
 
 
